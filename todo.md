@@ -166,3 +166,6 @@
 
 - [x] Erro no Select da página de Alocações - SelectItem com value vazio
 
+
+- [x] Erro no Select da página de Histórico de Alocações - SelectItem com value vazio
+

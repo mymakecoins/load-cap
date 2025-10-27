@@ -89,7 +89,6 @@ export default function AllocationHistory() {
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
                   {employees?.map((emp) => (
                     <SelectItem key={emp.id} value={emp.id.toString()}>
                       {emp.name}
@@ -109,7 +108,6 @@ export default function AllocationHistory() {
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
                   {projects?.map((proj) => (
                     <SelectItem key={proj.id} value={proj.id.toString()}>
                       {proj.name}
