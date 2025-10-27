@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, and, isNull, desc, asc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, clients, employees, projects, allocations, allocationHistory, Client, Employee, Project, Allocation, AllocationHistory } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,166 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// ===== CLIENT QUERIES =====
+export async function getAllClients() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(clients).where(eq(clients.isDeleted, false)).orderBy(desc(clients.createdAt));
+}
+
+export async function getClientById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(clients).where(and(eq(clients.id, id), eq(clients.isDeleted, false))).limit(1);
+  return result[0];
+}
+
+export async function createClient(data: Omit<Client, 'id' | 'isDeleted' | 'createdAt' | 'updatedAt'>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(clients).values(data);
+  return result;
+}
+
+export async function updateClient(id: number, data: Partial<Omit<Client, 'id' | 'isDeleted' | 'createdAt' | 'updatedAt'>>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(clients).set({ ...data, updatedAt: new Date() }).where(eq(clients.id, id));
+}
+
+export async function deleteClient(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(clients).set({ isDeleted: true, updatedAt: new Date() }).where(eq(clients.id, id));
+}
+
+// ===== EMPLOYEE QUERIES =====
+export async function getAllEmployees() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(employees).where(eq(employees.isDeleted, false)).orderBy(desc(employees.createdAt));
+}
+
+export async function getEmployeeById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(employees).where(and(eq(employees.id, id), eq(employees.isDeleted, false))).limit(1);
+  return result[0];
+}
+
+export async function createEmployee(data: Omit<Employee, 'id' | 'isDeleted' | 'createdAt' | 'updatedAt'>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(employees).values(data);
+}
+
+export async function updateEmployee(id: number, data: Partial<Omit<Employee, 'id' | 'isDeleted' | 'createdAt' | 'updatedAt'>>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(employees).set({ ...data, updatedAt: new Date() }).where(eq(employees.id, id));
+}
+
+export async function deleteEmployee(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(employees).set({ isDeleted: true, updatedAt: new Date() }).where(eq(employees.id, id));
+}
+
+// ===== PROJECT QUERIES =====
+export async function getAllProjects() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(projects).where(eq(projects.isDeleted, false)).orderBy(desc(projects.createdAt));
+}
+
+export async function getProjectById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(projects).where(and(eq(projects.id, id), eq(projects.isDeleted, false))).limit(1);
+  return result[0];
+}
+
+export async function createProject(data: Omit<Project, 'id' | 'isDeleted' | 'createdAt' | 'updatedAt'>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(projects).values(data);
+}
+
+export async function updateProject(id: number, data: Partial<Omit<Project, 'id' | 'isDeleted' | 'createdAt' | 'updatedAt'>>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(projects).set({ ...data, updatedAt: new Date() }).where(eq(projects.id, id));
+}
+
+export async function deleteProject(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(projects).set({ isDeleted: true, updatedAt: new Date() }).where(eq(projects.id, id));
+}
+
+// ===== ALLOCATION QUERIES =====
+export async function getAllAllocations() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(allocations).where(eq(allocations.isActive, true)).orderBy(desc(allocations.createdAt));
+}
+
+export async function getAllocationById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(allocations).where(and(eq(allocations.id, id), eq(allocations.isActive, true))).limit(1);
+  return result[0];
+}
+
+export async function getAllocationsByEmployee(employeeId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(allocations).where(and(eq(allocations.employeeId, employeeId), eq(allocations.isActive, true))).orderBy(desc(allocations.startDate));
+}
+
+export async function getAllocationsByProject(projectId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(allocations).where(and(eq(allocations.projectId, projectId), eq(allocations.isActive, true))).orderBy(desc(allocations.startDate));
+}
+
+export async function createAllocation(data: Omit<Allocation, 'id' | 'createdAt' | 'updatedAt'>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(allocations).values(data);
+}
+
+export async function updateAllocation(id: number, data: Partial<Omit<Allocation, 'id' | 'createdAt' | 'updatedAt'>>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(allocations).set({ ...data, updatedAt: new Date() }).where(eq(allocations.id, id));
+}
+
+export async function deleteAllocation(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(allocations).set({ isActive: false, updatedAt: new Date() }).where(eq(allocations.id, id));
+}
+
+// ===== ALLOCATION HISTORY QUERIES =====
+export async function createAllocationHistory(data: Omit<AllocationHistory, 'id' | 'createdAt'>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(allocationHistory).values(data);
+}
+
+export async function getAllocationHistory(employeeId?: number, projectId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const conditions: any[] = [];
+  
+  if (employeeId) conditions.push(eq(allocationHistory.employeeId, employeeId));
+  if (projectId) conditions.push(eq(allocationHistory.projectId, projectId));
+  
+  if (conditions.length > 0) {
+    return db.select().from(allocationHistory).where(and(...conditions)).orderBy(desc(allocationHistory.createdAt));
+  }
+  
+  return db.select().from(allocationHistory).orderBy(desc(allocationHistory.createdAt));
+}
