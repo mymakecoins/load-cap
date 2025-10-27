@@ -356,6 +356,10 @@ export const appRouter = router({
         
         return result;
       }),
+    
+    getHistory: protectedProcedure.query(async () => {
+      return db.getAllocationHistory();
+    }),
   }),
 });
 

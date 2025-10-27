@@ -127,10 +127,10 @@
 - [ ] Gráficos e visualizações
 
 ### Fase 4: Testes e Refinamento
-- [ ] Testes de funcionalidade
-- [ ] Testes de permissões
-- [ ] Otimização de performance
-- [ ] Ajustes de UX/UI
+- [x] Testes de funcionalidade básica
+- [x] Testes de permissões (RBAC)
+- [x] Otimização de performance
+- [x] Ajustes de UX/UI
 
 ## Status de Conclusão
 
@@ -147,14 +147,15 @@
 - [x] Interface de gerenciamento de alocações
 
 ### Fase 3: Visões e Relatórios
-- [ ] Dashboard de visão global (em progresso)
-- [ ] Dashboard de alocação por desenvolvedor
-- [ ] Dashboard de capacidade por projeto
-- [ ] Gráficos e visualizações
+- [x] Dashboard de visão global
+- [x] Dashboard de alocação por desenvolvedor
+- [x] Dashboard de capacidade por projeto
+- [x] Gráficos e visualizações
+- [x] Página de histórico de alocações
 
 ### Fase 4: Testes e Refinamento
-- [ ] Testes de funcionalidade
-- [ ] Testes de permissões
-- [ ] Otimização de performance
-- [ ] Ajustes de UX/UI
+- [x] Testes de funcionalidade básica
+- [x] Testes de permissões (RBAC)
+- [x] Otimização de performance
+- [x] Ajustes de UX/UI
 
