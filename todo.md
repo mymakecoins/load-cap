@@ -159,3 +159,10 @@
 - [x] Otimização de performance
 - [x] Ajustes de UX/UI
 
+
+
+
+## Bugs Reportados
+
+- [x] Erro no Select da página de Alocações - SelectItem com value vazio
+

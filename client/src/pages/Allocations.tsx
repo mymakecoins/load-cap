@@ -125,7 +125,7 @@ export default function Allocations() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="employeeId">Colaborador *</Label>
-                  <Select value={formData.employeeId.toString()} onValueChange={(value) => setFormData({ ...formData, employeeId: parseInt(value) })}>
+                  <Select value={formData.employeeId > 0 ? formData.employeeId.toString() : ""} onValueChange={(value) => setFormData({ ...formData, employeeId: parseInt(value) })}>
                     <SelectTrigger id="employeeId">
                       <SelectValue placeholder="Selecione um colaborador" />
                     </SelectTrigger>
@@ -140,7 +140,7 @@ export default function Allocations() {
                 </div>
                 <div>
                   <Label htmlFor="projectId">Projeto *</Label>
-                  <Select value={formData.projectId.toString()} onValueChange={(value) => setFormData({ ...formData, projectId: parseInt(value) })}>
+                  <Select value={formData.projectId > 0 ? formData.projectId.toString() : ""} onValueChange={(value) => setFormData({ ...formData, projectId: parseInt(value) })}>
                     <SelectTrigger id="projectId">
                       <SelectValue placeholder="Selecione um projeto" />
                     </SelectTrigger>
