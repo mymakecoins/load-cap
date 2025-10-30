@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal } from "drizzle-orm/mysql-core";
+import { integer, pgEnum, pgTable, text, timestamp, varchar, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 /**
@@ -6,20 +6,28 @@ import { relations } from "drizzle-orm";
  * Extend this file with additional tables as your product grows.
  * Columns use camelCase to match both database fields and generated types.
  */
-export const users = mysqlTable("users", {
+
+// Enums for PostgreSQL
+export const userRoleEnum = pgEnum("user_role", ["user", "admin", "coordinator", "manager", "developer"]);
+export const employeeTypeEnum = pgEnum("employee_type", ["frontend", "mobile", "backend", "qa", "manager"]);
+export const projectTypeEnum = pgEnum("project_type", ["sustentacao", "escopo_fechado", "squad_gerenciada"]);
+export const projectStatusEnum = pgEnum("project_status", ["planejamento", "em_andamento", "concluido", "pausado"]);
+export const allocationActionEnum = pgEnum("allocation_action", ["created", "updated", "deleted"]);
+
+export const users = pgTable("users", {
   /**
    * Surrogate primary key. Auto-incremented numeric value managed by the database.
    * Use this for relations between tables.
    */
-  id: int("id").autoincrement().primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin", "coordinator", "manager", "developer"]).default("user").notNull(),
+  role: userRoleEnum("role").default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
@@ -29,15 +37,15 @@ export type InsertUser = typeof users.$inferInsert;
 /**
  * Clients table - stores information about clients/companies
  */
-export const clients = mysqlTable("clients", {
-  id: int("id").autoincrement().primaryKey(),
+export const clients = pgTable("clients", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 320 }),
   phone: varchar("phone", { length: 20 }),
   company: varchar("company", { length: 255 }),
   isDeleted: boolean("isDeleted").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Client = typeof clients.$inferSelect;
@@ -46,15 +54,15 @@ export type InsertClient = typeof clients.$inferInsert;
 /**
  * Employees table - stores information about team members
  */
-export const employees = mysqlTable("employees", {
-  id: int("id").autoincrement().primaryKey(),
+export const employees = pgTable("employees", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 320 }).notNull().unique(),
-  type: mysqlEnum("type", ["frontend", "mobile", "backend", "qa", "manager"]).notNull(),
-  monthlyCapacityHours: int("monthlyCapacityHours").default(160).notNull(),
+  type: employeeTypeEnum("type").notNull(),
+  monthlyCapacityHours: integer("monthlyCapacityHours").default(160).notNull(),
   isDeleted: boolean("isDeleted").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Employee = typeof employees.$inferSelect;
@@ -63,21 +71,21 @@ export type InsertEmployee = typeof employees.$inferInsert;
 /**
  * Projects table - stores information about projects
  */
-export const projects = mysqlTable("projects", {
-  id: int("id").autoincrement().primaryKey(),
+export const projects = pgTable("projects", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 255 }).notNull(),
-  clientId: int("clientId").notNull(),
-  type: mysqlEnum("type", ["sustentacao", "escopo_fechado", "squad_gerenciada"]).notNull(),
-  managerId: int("managerId"),
+  clientId: integer("clientId").notNull(),
+  type: projectTypeEnum("type").notNull(),
+  managerId: integer("managerId"),
   startDate: timestamp("startDate"),
   plannedEndDate: timestamp("plannedEndDate"),
   actualEndDate: timestamp("actualEndDate"),
-  plannedProgress: int("plannedProgress").default(0),
-  actualProgress: int("actualProgress").default(0),
-  status: mysqlEnum("status", ["planejamento", "em_andamento", "concluido", "pausado"]).default("planejamento").notNull(),
+  plannedProgress: integer("plannedProgress").default(0),
+  actualProgress: integer("actualProgress").default(0),
+  status: projectStatusEnum("status").default("planejamento").notNull(),
   isDeleted: boolean("isDeleted").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Project = typeof projects.$inferSelect;
@@ -86,16 +94,16 @@ export type InsertProject = typeof projects.$inferInsert;
 /**
  * Allocations table - stores employee allocations to projects
  */
-export const allocations = mysqlTable("allocations", {
-  id: int("id").autoincrement().primaryKey(),
-  employeeId: int("employeeId").notNull(),
-  projectId: int("projectId").notNull(),
-  allocatedHours: int("allocatedHours").notNull(),
+export const allocations = pgTable("allocations", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  employeeId: integer("employeeId").notNull(),
+  projectId: integer("projectId").notNull(),
+  allocatedHours: integer("allocatedHours").notNull(),
   startDate: timestamp("startDate").notNull(),
   endDate: timestamp("endDate"),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Allocation = typeof allocations.$inferSelect;
@@ -104,16 +112,16 @@ export type InsertAllocation = typeof allocations.$inferInsert;
 /**
  * Allocation history table - tracks changes to allocations for audit purposes
  */
-export const allocationHistory = mysqlTable("allocation_history", {
-  id: int("id").autoincrement().primaryKey(),
-  allocationId: int("allocationId"),
-  employeeId: int("employeeId").notNull(),
-  projectId: int("projectId").notNull(),
-  allocatedHours: int("allocatedHours").notNull(),
+export const allocationHistory = pgTable("allocation_history", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  allocationId: integer("allocationId"),
+  employeeId: integer("employeeId").notNull(),
+  projectId: integer("projectId").notNull(),
+  allocatedHours: integer("allocatedHours").notNull(),
   startDate: timestamp("startDate").notNull(),
   endDate: timestamp("endDate"),
-  action: mysqlEnum("action", ["created", "updated", "deleted"]).notNull(),
-  changedBy: int("changedBy"),
+  action: allocationActionEnum("action").notNull(),
+  changedBy: integer("changedBy"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -166,3 +174,4 @@ export const allocationHistoryRelations = relations(allocationHistory, ({ one })
     references: [projects.id],
   }),
 }));
+

@@ -169,3 +169,9 @@
 
 - [x] Erro no Select da página de Histórico de Alocações - SelectItem com value vazio
 
+
+
+## Mudanças Solicitadas
+
+- [x] Migrar banco de dados de MySQL para PostgreSQL
+
