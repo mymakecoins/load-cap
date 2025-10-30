@@ -102,7 +102,7 @@ export const appRouter = router({
       .input(z.object({
         name: z.string().min(1),
         email: z.string().email(),
-        type: z.enum(["frontend", "mobile", "backend", "qa", "manager"]),
+        type: z.enum(["frontend", "mobile", "backend", "qa", "manager", "fullstack"]),
         monthlyCapacityHours: z.number().int().positive().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
@@ -120,7 +120,7 @@ export const appRouter = router({
         id: z.number(),
         name: z.string().min(1).optional(),
         email: z.string().email().optional(),
-        type: z.enum(["frontend", "mobile", "backend", "qa", "manager"]).optional(),
+        type: z.enum(["frontend", "mobile", "backend", "qa", "manager", "fullstack"]).optional(),
         monthlyCapacityHours: z.number().int().positive().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
@@ -360,6 +360,55 @@ export const appRouter = router({
     getHistory: protectedProcedure.query(async () => {
       return db.getAllocationHistory();
     }),
+  }),
+
+  users: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      if (!isCoordinator(ctx.user?.role || "")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas coordenadores podem listar usuarios" });
+      }
+      return db.getAllUsers();
+    }),
+    
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().optional(),
+        password: z.string().min(6),
+        role: z.enum(["admin", "coordinator", "manager"]),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!isCoordinator(ctx.user?.role || "")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Apenas coordenadores podem criar usuarios" });
+        }
+        return db.createUser(input);
+      }),
+    
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1).optional(),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+        role: z.enum(["admin", "coordinator", "manager"]).optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!isCoordinator(ctx.user?.role || "")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Apenas coordenadores podem editar usuarios" });
+        }
+        const { id, ...data } = input;
+        return db.updateUser(id, data);
+      }),
+    
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (!isCoordinator(ctx.user?.role || "")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Apenas coordenadores podem deletar usuarios" });
+        }
+        return db.deleteUser(input.id);
+      }),
   }),
 });
 

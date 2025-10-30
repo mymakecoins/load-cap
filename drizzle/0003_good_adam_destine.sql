@@ -1,0 +1,1 @@
+ALTER TABLE `employees` MODIFY COLUMN `type` enum('frontend','mobile','backend','qa','manager','fullstack') NOT NULL;

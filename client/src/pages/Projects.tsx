@@ -55,6 +55,7 @@ export default function Projects() {
     startDate: "",
     plannedEndDate: "",
     plannedProgress: 0,
+    actualProgress: 0,
   });
 
   const { data: projects, isLoading: projLoading, refetch } = trpc.projects.list.useQuery();
@@ -69,6 +70,11 @@ export default function Projects() {
     e.preventDefault();
     
     try {
+      if (formData.plannedProgress < 0 || formData.actualProgress < 0) {
+        toast.error("Progresso previsto e realizado não podem ser negativos");
+        return;
+      }
+      
       const data: any = {
         name: formData.name,
         clientId: formData.clientId,
@@ -77,6 +83,7 @@ export default function Projects() {
         startDate: formData.startDate ? new Date(formData.startDate) : undefined,
         plannedEndDate: formData.plannedEndDate ? new Date(formData.plannedEndDate) : undefined,
         plannedProgress: formData.plannedProgress,
+        actualProgress: formData.actualProgress,
       };
 
       if (editingId) {
@@ -86,7 +93,7 @@ export default function Projects() {
         await createMutation.mutateAsync(data);
         toast.success("Projeto criado com sucesso");
       }
-      setFormData({ name: "", clientId: 0, type: "escopo_fechado", managerId: 0, startDate: "", plannedEndDate: "", plannedProgress: 0 });
+      setFormData({ name: "", clientId: 0, type: "escopo_fechado", managerId: 0, startDate: "", plannedEndDate: "", plannedProgress: 0, actualProgress: 0 });
       setEditingId(null);
       setOpen(false);
       refetch();
@@ -104,6 +111,7 @@ export default function Projects() {
       startDate: project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : "",
       plannedEndDate: project.plannedEndDate ? new Date(project.plannedEndDate).toISOString().split('T')[0] : "",
       plannedProgress: project.plannedProgress,
+      actualProgress: project.actualProgress || 0,
     });
     setEditingId(project.id);
     setOpen(true);
@@ -128,7 +136,7 @@ export default function Projects() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { setEditingId(null); setFormData({ name: "", clientId: 0, type: "escopo_fechado", managerId: 0, startDate: "", plannedEndDate: "", plannedProgress: 0 }); }}>
+            <Button onClick={() => { setEditingId(null); setFormData({ name: "", clientId: 0, type: "escopo_fechado", managerId: 0, startDate: "", plannedEndDate: "", plannedProgress: 0, actualProgress: 0 }); }}>
               <Plus className="mr-2 h-4 w-4" />
               Novo Projeto
             </Button>
@@ -148,12 +156,40 @@ export default function Projects() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
+                  placeholder="Nome do projeto"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="clientId">Cliente *</Label>
-                  <Select value={formData.clientId.toString()} onValueChange={(value) => setFormData({ ...formData, clientId: parseInt(value) })}>
+                  <Label htmlFor="plannedProgress">Progresso Previsto (%) *</Label>
+                  <Input
+                    id="plannedProgress"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.plannedProgress}
+                    onChange={(e) => setFormData({ ...formData, plannedProgress: Math.max(0, parseInt(e.target.value) || 0) })}
+                    required
+                    placeholder="0-100"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="actualProgress">Progresso Realizado (%) *</Label>
+                  <Input
+                    id="actualProgress"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.actualProgress}
+                    onChange={(e) => setFormData({ ...formData, actualProgress: Math.max(0, parseInt(e.target.value) || 0) })}
+                    required
+                    placeholder="0-100"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="clientId">Cliente *</Label>                  <Select value={formData.clientId.toString()} onValueChange={(value) => setFormData({ ...formData, clientId: parseInt(value) })}>
                     <SelectTrigger id="clientId">
                       <SelectValue placeholder="Selecione um cliente" />
                     </SelectTrigger>

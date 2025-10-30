@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
-const COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b"];
+const COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"];
 
 export default function Dashboard() {
   const { data: allocations, isLoading: allocLoading } = trpc.allocations.list.useQuery();
@@ -23,8 +23,17 @@ export default function Dashboard() {
     return acc;
   }, {}) || {};
 
+  const typeLabels: Record<string, string> = {
+    frontend: "Frontend",
+    mobile: "Mobile",
+    backend: "Backend",
+    fullstack: "Fullstack",
+    qa: "QA",
+    manager: "Manager",
+  };
+
   const employeeTypeData = Object.entries(employeesByType).map(([type, count]) => ({
-    name: type.charAt(0).toUpperCase() + type.slice(1),
+    name: typeLabels[type] || type.charAt(0).toUpperCase() + type.slice(1),
     value: count,
   }));
 

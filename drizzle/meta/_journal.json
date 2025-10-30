@@ -15,6 +15,20 @@
       "when": 1761601135284,
       "tag": "0001_oval_bug",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1761858484661,
+      "tag": "0002_demonic_tyger_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1761860071707,
+      "tag": "0003_good_adam_destine",
+      "breakpoints": true
     }
   ]
 }

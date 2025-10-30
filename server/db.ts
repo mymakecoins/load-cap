@@ -1,4 +1,4 @@
-import { eq, and, isNull, desc, asc } from "drizzle-orm";
+import { eq, and, or, desc, ne, isNull, asc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, clients, employees, projects, allocations, allocationHistory, Client, Employee, Project, Allocation, AllocationHistory } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -252,3 +252,55 @@ export async function getAllocationHistory(employeeId?: number, projectId?: numb
   
   return db.select().from(allocationHistory).orderBy(desc(allocationHistory.createdAt));
 }
+
+
+
+// ===== USER QUERIES =====
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(users).where(ne(users.role, 'user')).orderBy(desc(users.createdAt));
+}
+
+export async function createUser(data: {
+  name: string;
+  email: string;
+  phone?: string;
+  password: string;
+  role: 'admin' | 'coordinator' | 'manager';
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Hash password (in production, use bcrypt)
+  const crypto = require('crypto');
+  const passwordHash = crypto.createHash('sha256').update(data.password).digest('hex');
+  
+  return db.insert(users).values({
+    name: data.name,
+    email: data.email,
+    phone: data.phone || null,
+    passwordHash: passwordHash,
+    role: data.role,
+    loginMethod: 'email',
+    lastSignedIn: new Date(),
+  });
+}
+
+export async function updateUser(id: number, data: Partial<{
+  name: string;
+  email: string;
+  phone: string;
+  role: 'admin' | 'coordinator' | 'manager';
+}>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(users).set({ ...data, updatedAt: new Date() }).where(eq(users.id, id));
+}
+
+export async function deleteUser(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(users).where(eq(users.id, id));
+}
+

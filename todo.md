@@ -169,3 +169,13 @@
 
 - [x] Erro no Select da página de Histórico de Alocações - SelectItem com value vazio
 
+
+- [ ] Adicionar campo "realizado" no cadastro de projeto
+- [ ] Validar que campos "previsto" e "realizado" não aceitem números negativos
+
+
+- [x] Incluir "Fullstack" no enum de stacks dos desenvolvedores
+
+
+- [x] Erro ao salvar colaborador com tipo Fullstack - investigar causa
+

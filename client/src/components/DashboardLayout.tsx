@@ -36,6 +36,7 @@ const menuItems = [
   { icon: TrendingUp, label: "Alocacao Dev", path: "/alocacao-desenvolvedor" },
   { icon: BarChart3, label: "Capacidade", path: "/capacidade-projeto" },
   { icon: BarChart3, label: "Historico", path: "/historico-alocacoes" },
+  { icon: Users, label: "Usuarios", path: "/usuarios" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

@@ -14,6 +14,7 @@ import Dashboard from "./pages/Dashboard";
 import EmployeeAllocations from "./pages/EmployeeAllocations";
 import ProjectCapacity from "./pages/ProjectCapacity";
 import AllocationHistory from "./pages/AllocationHistory";
+import Users from "./pages/Users";
 import { useAuth } from "./_core/hooks/useAuth";
 
 function Router() {
@@ -38,6 +39,7 @@ function Router() {
         <Route path={"/alocacao-desenvolvedor"} component={EmployeeAllocations} />
         <Route path={"/capacidade-projeto"} component={ProjectCapacity} />
         <Route path={"/historico-alocacoes"} component={AllocationHistory} />
+        <Route path={"/usuarios"} component={Users} />
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
       </Switch>
