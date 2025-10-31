@@ -201,3 +201,6 @@
 - [x] Adicionar filtro por tipo de colaborador na página de Alocação por Desenvolvedor
 - [x] Incluir tabela prévia com nome e taxa de utilização para seleção do desenvolvedor
 
+
+- [x] Erro no Select da página de Alocação por Desenvolvedor - SelectItem com value vazio
+

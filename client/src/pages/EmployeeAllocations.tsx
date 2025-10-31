@@ -167,7 +167,6 @@ export default function EmployeeAllocations() {
               <SelectValue placeholder="Todos os tipos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os tipos</SelectItem>
               {EMPLOYEE_TYPES.map((type) => (
                 <SelectItem key={type.value} value={type.value}>
                   {type.label}
