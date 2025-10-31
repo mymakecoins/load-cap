@@ -219,3 +219,12 @@
 - [x] Remapear colaboradores existentes que estão como "frontend" para "requirements_analyst"
 - [x] Atualizar filtros e seletores em todo o sistema
 
+
+
+## Formatação de Rótulos
+
+- [x] Atualizar Dashboard para exibir rótulos com primeira letra maiúscula
+- [x] Atualizar Employees para exibir rótulos com primeira letra maiúscula
+- [x] Atualizar EmployeeAllocations para exibir rótulos com primeira letra maiúscula
+- [x] Mudar "requirements_analyst" para "Analista de Requisitos" em todos os lugares
+

@@ -29,7 +29,7 @@ export default function Dashboard() {
     backend: "Backend",
     fullstack: "Fullstack",
     qa: "QA",
-    manager: "Manager",
+    manager: "Gerente",
     requirements_analyst: "Analista de Requisitos",
   };
 

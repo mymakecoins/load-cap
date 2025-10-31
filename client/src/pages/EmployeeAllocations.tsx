@@ -40,6 +40,10 @@ const EMPLOYEE_TYPES = [
   { value: "requirements_analyst", label: "Analista de Requisitos" },
 ];
 
+function getEmployeeTypeLabel(type: string): string {
+  return EMPLOYEE_TYPES.find(t => t.value === type)?.label || type;
+}
+
 export default function EmployeeAllocations() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [selectedEmployeeType, setSelectedEmployeeType] = useState<string>("");
@@ -205,7 +209,7 @@ export default function EmployeeAllocations() {
                       }`}
                     >
                       <TableCell className="font-medium">{emp.name}</TableCell>
-                      <TableCell>{emp.type}</TableCell>
+                      <TableCell>{getEmployeeTypeLabel(emp.type)}</TableCell>
                       <TableCell className="text-right">
                         <span className={`font-semibold ${
                           emp.utilizationRate > 100 ? "text-red-600" :
@@ -250,7 +254,7 @@ export default function EmployeeAllocations() {
               ) : employees && employees.length > 0 ? (
                 employees.map((emp) => (
                   <SelectItem key={emp.id} value={emp.id.toString()}>
-                    {emp.name} ({emp.type})
+                    {emp.name} ({getEmployeeTypeLabel(emp.type)})
                   </SelectItem>
                 ))
               ) : (
