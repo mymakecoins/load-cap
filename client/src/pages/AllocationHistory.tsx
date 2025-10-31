@@ -21,11 +21,24 @@ import { trpc } from "@/lib/trpc";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
+function getMonthDates() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  return {
+    start: firstDay.toISOString().split('T')[0],
+    end: lastDay.toISOString().split('T')[0],
+  };
+}
+
 export default function AllocationHistory() {
+  const monthDates = getMonthDates();
   const [filterEmployeeId, setFilterEmployeeId] = useState<number | null>(null);
   const [filterProjectId, setFilterProjectId] = useState<number | null>(null);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(monthDates.start);
+  const [endDate, setEndDate] = useState(monthDates.end);
 
   const { data: employees } = trpc.employees.list.useQuery();
   const { data: projects } = trpc.projects.list.useQuery();

@@ -190,3 +190,6 @@
 - [x] Adicionar presets para Semana Atual (seg-sex) na página de Alocação por Desenvolvedor
 - [x] Adicionar presets para Semana Seguinte (seg-sex) na página de Alocação por Desenvolvedor
 
+
+- [x] Carregar página de Histórico de Alocações com datas pré-definidas (primeiro e último dia do mês atual)
+
