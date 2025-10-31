@@ -208,3 +208,6 @@
 - [x] Alterar texto do menu de "Sistema de Gestão de Times - Fábrica de Software" para "GTeam"
 - [x] Trocar imagem do logo pela nova (gsys.jpeg)
 
+
+- [x] Logo antiga continua aparecendo - investigar VITE_APP_LOGO env var (CORRIGIDO: usar sempre /logo.jpeg local)
+
