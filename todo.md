@@ -193,3 +193,7 @@
 
 - [x] Carregar página de Histórico de Alocações com datas pré-definidas (primeiro e último dia do mês atual)
 
+
+- [x] Alterar título do sistema para "GTeam"
+- [x] Incluir logo da empresa (gsys.jpeg) no layout
+
