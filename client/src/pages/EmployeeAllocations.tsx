@@ -30,14 +30,43 @@ function getWeekDates(weekOffset: number) {
   return { start: monday, end: friday };
 }
 
+const EMPLOYEE_TYPES = [
+  { value: "frontend", label: "Frontend" },
+  { value: "mobile", label: "Mobile" },
+  { value: "backend", label: "Backend" },
+  { value: "fullstack", label: "Fullstack" },
+  { value: "qa", label: "QA" },
+  { value: "manager", label: "Gerente" },
+];
+
 export default function EmployeeAllocations() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+  const [selectedEmployeeType, setSelectedEmployeeType] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
   const { data: employees, isLoading: empLoading } = trpc.employees.list.useQuery();
   const { data: allocations, isLoading: allocLoading } = trpc.allocations.list.useQuery();
   const { data: projects } = trpc.projects.list.useQuery();
+
+  // Filtrar colaboradores por tipo se selecionado
+  let filteredEmployees = employees || [];
+  if (selectedEmployeeType) {
+    filteredEmployees = filteredEmployees.filter(e => e.type === selectedEmployeeType);
+  }
+
+  // Calcular taxa de utilização para cada colaborador
+  const employeeUtilization = filteredEmployees.map(emp => {
+    const empAllocations = allocations?.filter(a => a.employeeId === emp.id) || [];
+    const totalAllocated = empAllocations.reduce((sum, a) => sum + a.allocatedHours, 0);
+    const monthlyCapacity = emp.monthlyCapacityHours || 0;
+    const utilizationRate = monthlyCapacity > 0 ? ((totalAllocated / monthlyCapacity) * 100) : 0;
+    return {
+      ...emp,
+      totalAllocated,
+      utilizationRate: parseFloat(utilizationRate.toFixed(1)),
+    };
+  });
 
   const selectedEmployee = selectedEmployeeId ? employees?.find(e => e.id === selectedEmployeeId) : null;
   let employeeAllocations = selectedEmployeeId 
@@ -126,8 +155,83 @@ export default function EmployeeAllocations() {
         </CardContent>
       </Card>
 
-      {/* Seletor de Colaborador */}
+      {/* Filtro por Tipo de Colaborador */}
       <Card>
+        <CardHeader>
+          <CardTitle>Filtro por Tipo de Colaborador</CardTitle>
+          <CardDescription>Selecione um tipo para filtrar colaboradores</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select value={selectedEmployeeType} onValueChange={setSelectedEmployeeType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Todos os tipos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todos os tipos</SelectItem>
+              {EMPLOYEE_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
+      {/* Tabela Prévia de Colaboradores */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Colaboradores</CardTitle>
+          <CardDescription>Clique em um colaborador para visualizar os gráficos de alocação</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead className="text-right">Taxa de Utilização</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {employeeUtilization.length > 0 ? (
+                  employeeUtilization.map((emp) => (
+                    <TableRow
+                      key={emp.id}
+                      onClick={() => setSelectedEmployeeId(emp.id)}
+                      className={`cursor-pointer hover:bg-accent transition-colors ${
+                        selectedEmployeeId === emp.id ? "bg-accent" : ""
+                      }`}
+                    >
+                      <TableCell className="font-medium">{emp.name}</TableCell>
+                      <TableCell>{emp.type}</TableCell>
+                      <TableCell className="text-right">
+                        <span className={`font-semibold ${
+                          emp.utilizationRate > 100 ? "text-red-600" :
+                          emp.utilizationRate > 80 ? "text-orange-600" :
+                          "text-green-600"
+                        }`}>
+                          {emp.utilizationRate}%
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                      Nenhum colaborador encontrado
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Seletor de Colaborador (Oculto, mantido para compatibilidade) */}
+      <Card className="hidden">
         <CardHeader>
           <CardTitle>Selecionar Colaborador</CardTitle>
           <CardDescription>Escolha um colaborador para visualizar suas alocações</CardDescription>

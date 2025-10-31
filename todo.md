@@ -197,3 +197,7 @@
 - [x] Alterar título do sistema para "GTeam"
 - [x] Incluir logo da empresa (gsys.jpeg) no layout
 
+
+- [x] Adicionar filtro por tipo de colaborador na página de Alocação por Desenvolvedor
+- [x] Incluir tabela prévia com nome e taxa de utilização para seleção do desenvolvedor
+
