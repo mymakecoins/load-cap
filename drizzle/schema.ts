@@ -77,7 +77,7 @@ export const projects = mysqlTable("projects", {
   actualEndDate: timestamp("actualEndDate"),
   plannedProgress: int("plannedProgress").default(0),
   actualProgress: int("actualProgress").default(0),
-  status: mysqlEnum("status", ["planejamento", "em_andamento", "concluido", "pausado"]).default("planejamento").notNull(),
+  status: mysqlEnum("status", ["planejamento", "discovery", "em_andamento", "homologacao", "delivery", "go_live", "concluido", "pausado"]).default("planejamento").notNull(),
   isDeleted: boolean("isDeleted").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

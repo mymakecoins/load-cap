@@ -241,3 +241,13 @@
 - [x] Ordenar lista de colaboradores alfabéticamente em Histórico de Alocações
 - [x] Ordenar lista de projetos alfabéticamente em Histórico de Alocações
 
+
+
+## Novos Status de Projetos
+
+- [x] Adicionar status "Discovery" ao enum de status de projetos
+- [x] Adicionar status "Homologação" ao enum de status de projetos
+- [x] Adicionar status "Delivery" ao enum de status de projetos
+- [x] Adicionar status "Go Live" ao enum de status de projetos
+- [x] Atualizar componentes da interface para exibir os novos status
+

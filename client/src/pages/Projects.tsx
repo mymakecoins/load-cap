@@ -39,7 +39,11 @@ const PROJECT_TYPES = [
 
 const PROJECT_STATUS = [
   { value: "planejamento", label: "Planejamento" },
+  { value: "discovery", label: "Discovery" },
   { value: "em_andamento", label: "Em Andamento" },
+  { value: "homologacao", label: "Homologação" },
+  { value: "delivery", label: "Delivery" },
+  { value: "go_live", label: "Go Live" },
   { value: "concluido", label: "Concluído" },
   { value: "pausado", label: "Pausado" },
 ];
