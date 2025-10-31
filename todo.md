@@ -234,3 +234,10 @@
 
 - [x] Erro ao atualizar usuário: "Preencha todos os campos" mesmo com campos obrigatórios preenchidos (CORRIGIDO: senha agora é opcional ao editar)
 
+
+
+## Melhorias de UX - Sessão Atual
+
+- [x] Ordenar lista de colaboradores alfabéticamente em Histórico de Alocações
+- [x] Ordenar lista de projetos alfabéticamente em Histórico de Alocações
+
