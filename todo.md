@@ -204,3 +204,7 @@
 
 - [x] Erro no Select da página de Alocação por Desenvolvedor - SelectItem com value vazio
 
+
+- [x] Alterar texto do menu de "Sistema de Gestão de Times - Fábrica de Software" para "GTeam"
+- [x] Trocar imagem do logo pela nova (gsys.jpeg)
+
