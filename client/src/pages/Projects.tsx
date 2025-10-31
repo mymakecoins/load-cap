@@ -56,6 +56,7 @@ export default function Projects() {
     plannedEndDate: "",
     plannedProgress: 0,
     actualProgress: 0,
+    status: "planejamento" as const,
   });
 
   const { data: projects, isLoading: projLoading, refetch } = trpc.projects.list.useQuery();
@@ -84,6 +85,7 @@ export default function Projects() {
         plannedEndDate: formData.plannedEndDate ? new Date(formData.plannedEndDate) : undefined,
         plannedProgress: formData.plannedProgress,
         actualProgress: formData.actualProgress,
+        status: formData.status,
       };
 
       if (editingId) {
@@ -93,7 +95,7 @@ export default function Projects() {
         await createMutation.mutateAsync(data);
         toast.success("Projeto criado com sucesso");
       }
-      setFormData({ name: "", clientId: 0, type: "escopo_fechado", managerId: 0, startDate: "", plannedEndDate: "", plannedProgress: 0, actualProgress: 0 });
+      setFormData({ name: "", clientId: 0, type: "escopo_fechado", managerId: 0, startDate: "", plannedEndDate: "", plannedProgress: 0, actualProgress: 0, status: "planejamento" });
       setEditingId(null);
       setOpen(false);
       refetch();
@@ -112,6 +114,7 @@ export default function Projects() {
       plannedEndDate: project.plannedEndDate ? new Date(project.plannedEndDate).toISOString().split('T')[0] : "",
       plannedProgress: project.plannedProgress,
       actualProgress: project.actualProgress || 0,
+      status: project.status || "planejamento",
     });
     setEditingId(project.id);
     setOpen(true);
@@ -136,7 +139,7 @@ export default function Projects() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { setEditingId(null); setFormData({ name: "", clientId: 0, type: "escopo_fechado", managerId: 0, startDate: "", plannedEndDate: "", plannedProgress: 0, actualProgress: 0 }); }}>
+            <Button onClick={() => { setEditingId(null); setFormData({ name: "", clientId: 0, type: "escopo_fechado", managerId: 0, startDate: "", plannedEndDate: "", plannedProgress: 0, actualProgress: 0, status: "planejamento" }); }}>
               <Plus className="mr-2 h-4 w-4" />
               Novo Projeto
             </Button>
@@ -255,15 +258,19 @@ export default function Projects() {
                 </div>
               </div>
               <div>
-                <Label htmlFor="plannedProgress">Andamento Previsto (%)</Label>
-                <Input
-                  id="plannedProgress"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.plannedProgress}
-                  onChange={(e) => setFormData({ ...formData, plannedProgress: parseInt(e.target.value) })}
-                />
+                <Label htmlFor="status">Status do Projeto *</Label>
+                <Select value={formData.status} onValueChange={(value: any) => setFormData({ ...formData, status: value })}>
+                  <SelectTrigger id="status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROJECT_STATUS.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <Button type="submit" className="w-full">
                 {editingId ? "Atualizar" : "Criar"}

@@ -20,17 +20,45 @@ import { trpc } from "@/lib/trpc";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
 
+function getWeekDates(weekOffset: number) {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust when day is Sunday
+  const monday = new Date(today.setDate(diff + (weekOffset * 7)));
+  const friday = new Date(monday);
+  friday.setDate(friday.getDate() + 4);
+  return { start: monday, end: friday };
+}
+
 export default function EmployeeAllocations() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const { data: employees, isLoading: empLoading } = trpc.employees.list.useQuery();
   const { data: allocations, isLoading: allocLoading } = trpc.allocations.list.useQuery();
   const { data: projects } = trpc.projects.list.useQuery();
 
   const selectedEmployee = selectedEmployeeId ? employees?.find(e => e.id === selectedEmployeeId) : null;
-  const employeeAllocations = selectedEmployeeId 
+  let employeeAllocations = selectedEmployeeId 
     ? allocations?.filter(a => a.employeeId === selectedEmployeeId) || []
     : [];
+  
+  // Filtrar por datas se especificadas
+  if (startDate || endDate) {
+    employeeAllocations = employeeAllocations.filter(a => {
+      const allocStart = a.startDate ? new Date(a.startDate) : null;
+      if (startDate && allocStart && allocStart < new Date(startDate)) return false;
+      if (endDate && allocStart && allocStart > new Date(endDate)) return false;
+      return true;
+    });
+  }
+  
+  const handlePresetWeek = (weekOffset: number) => {
+    const { start, end } = getWeekDates(weekOffset);
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
+  };
 
   // Calcular estatísticas do colaborador
   const totalAllocated = employeeAllocations.reduce((sum, a) => sum + a.allocatedHours, 0);
@@ -56,6 +84,47 @@ export default function EmployeeAllocations() {
         <h1 className="text-3xl font-bold tracking-tight">Alocação por Desenvolvedor</h1>
         <p className="text-muted-foreground mt-2">Visualizar alocação individual de cada colaborador</p>
       </div>
+
+      {/* Filtros de Data */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtros de Período</CardTitle>
+          <CardDescription>Selecione um período ou use os presets</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Data Início</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Data Fim</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => handlePresetWeek(0)}>
+              Semana Atual
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handlePresetWeek(1)}>
+              Próxima Semana
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { setStartDate(""); setEndDate(""); }}>
+              Limpar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Seletor de Colaborador */}
       <Card>

@@ -182,3 +182,11 @@
 
 - [x] Erro "require is not defined" na página de usuários - corrigir import de crypto
 
+
+- [x] Remover campo "Andamento Previsto" do cadastro de projeto
+- [x] Usar "Progresso Previsto" para cálculo do gráfico no lugar de "Andamento Previsto"
+- [x] Adicionar dropdown de status do projeto no cadastro (planejamento, em_andamento, concluido, pausado)
+- [x] Incluir filtro por data início e fim na página de Alocação por Desenvolvedor
+- [x] Adicionar presets para Semana Atual (seg-sex) na página de Alocação por Desenvolvedor
+- [x] Adicionar presets para Semana Seguinte (seg-sex) na página de Alocação por Desenvolvedor
+
