@@ -228,3 +228,9 @@
 - [x] Atualizar EmployeeAllocations para exibir rótulos com primeira letra maiúscula
 - [x] Mudar "requirements_analyst" para "Analista de Requisitos" em todos os lugares
 
+
+
+## Bugs Reportados - Sessão Atual
+
+- [x] Erro ao atualizar usuário: "Preencha todos os campos" mesmo com campos obrigatórios preenchidos (CORRIGIDO: senha agora é opcional ao editar)
+

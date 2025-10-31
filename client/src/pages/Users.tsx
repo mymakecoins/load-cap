@@ -48,8 +48,14 @@ export default function Users() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.email || !formData.password) {
+    // Validação: senha é obrigatória apenas ao criar novo usuário
+    if (!formData.name || !formData.email) {
       toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    if (!editingId && !formData.password) {
+      toast.error("Senha é obrigatória para novo usuário");
       return;
     }
 
