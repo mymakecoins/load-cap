@@ -179,3 +179,6 @@
 
 - [x] Erro ao salvar colaborador com tipo Fullstack - investigar causa
 
+
+- [x] Erro "require is not defined" na página de usuários - corrigir import de crypto
+

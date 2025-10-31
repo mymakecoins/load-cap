@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { eq, and, or, desc, ne, isNull, asc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, clients, employees, projects, allocations, allocationHistory, Client, Employee, Project, Allocation, AllocationHistory } from "../drizzle/schema";
@@ -273,8 +274,7 @@ export async function createUser(data: {
   if (!db) throw new Error("Database not available");
   
   // Hash password (in production, use bcrypt)
-  const crypto = require('crypto');
-  const passwordHash = crypto.createHash('sha256').update(data.password).digest('hex');
+  const passwordHash = createHash('sha256').update(data.password).digest('hex');
   
   return db.insert(users).values({
     name: data.name,
