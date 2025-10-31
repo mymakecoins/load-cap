@@ -211,3 +211,11 @@
 
 - [x] Logo antiga continua aparecendo - investigar VITE_APP_LOGO env var (CORRIGIDO: usar sempre /logo.jpeg local)
 
+
+
+## Novos Requisitos
+
+- [x] Adicionar novo tipo de colaborador "Analista de Requisitos" (requirements_analyst)
+- [x] Remapear colaboradores existentes que estão como "frontend" para "requirements_analyst"
+- [x] Atualizar filtros e seletores em todo o sistema
+

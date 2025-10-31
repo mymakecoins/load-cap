@@ -37,6 +37,7 @@ const EMPLOYEE_TYPES = [
   { value: "fullstack", label: "Fullstack" },
   { value: "qa", label: "QA" },
   { value: "manager", label: "Gerente" },
+  { value: "requirements_analyst", label: "Analista de Requisitos" },
 ];
 
 export default function EmployeeAllocations() {

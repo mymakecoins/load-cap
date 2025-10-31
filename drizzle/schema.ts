@@ -53,7 +53,7 @@ export const employees = mysqlTable("employees", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 320 }).notNull().unique(),
-  type: mysqlEnum("type", ["frontend", "mobile", "backend", "qa", "manager", "fullstack"]).notNull(),
+  type: mysqlEnum("type", ["frontend", "mobile", "backend", "qa", "manager", "fullstack", "requirements_analyst"]).notNull(),
   monthlyCapacityHours: int("monthlyCapacityHours").default(160).notNull(),
   isDeleted: boolean("isDeleted").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

@@ -38,6 +38,7 @@ const EMPLOYEE_TYPES = [
   { value: "fullstack", label: "Fullstack" },
   { value: "qa", label: "QA" },
   { value: "manager", label: "Gerente de Projeto" },
+  { value: "requirements_analyst", label: "Analista de Requisitos" },
 ];
 
 export default function Employees() {

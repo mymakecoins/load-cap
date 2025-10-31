@@ -30,6 +30,7 @@ export default function Dashboard() {
     fullstack: "Fullstack",
     qa: "QA",
     manager: "Manager",
+    requirements_analyst: "Analista de Requisitos",
   };
 
   const employeeTypeData = Object.entries(employeesByType).map(([type, count]) => ({

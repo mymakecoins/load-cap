@@ -1,0 +1,30 @@
+{
+  "query": "SELECT type, COUNT(*) as quantidade FROM employees WHERE isDeleted = false GROUP BY type ORDER BY quantidade DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4WdiMNhsdsPsN8w.root --database U8h3fnwL3fPTcSEcoFvCiC --execute SELECT type, COUNT(*) as quantidade FROM employees WHERE isDeleted = false GROUP BY type ORDER BY quantidade DESC;",
+  "rows": [
+    {
+      "type": "backend",
+      "quantidade": "16"
+    },
+    {
+      "type": "frontend",
+      "quantidade": "10"
+    },
+    {
+      "type": "mobile",
+      "quantidade": "7"
+    },
+    {
+      "type": "manager",
+      "quantidade": "7"
+    },
+    {
+      "type": "fullstack",
+      "quantidade": "7"
+    }
+  ],
+  "messages": [],
+  "stdout": "type\tquantidade\nbackend\t16\nfrontend\t10\nmobile\t7\nmanager\t7\nfullstack\t7\n",
+  "stderr": "",
+  "execution_time_ms": 514
+}
