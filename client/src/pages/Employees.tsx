@@ -88,6 +88,9 @@ export default function Employees() {
   };
 
   const handleDelete = async (id: number) => {
+    if (!window.confirm("Tem certeza que deseja deletar este colaborador? Esta ação não pode ser desfeita.")) {
+      return;
+    }
     try {
       await deleteMutation.mutateAsync({ id });
       toast.success("Colaborador deletado com sucesso");

@@ -66,6 +66,9 @@ export default function Clients() {
   };
 
   const handleDelete = async (id: number) => {
+    if (!window.confirm("Tem certeza que deseja deletar este cliente? Esta ação não pode ser desfeita.")) {
+      return;
+    }
     try {
       await deleteMutation.mutateAsync({ id });
       toast.success("Cliente deletado com sucesso");

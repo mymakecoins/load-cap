@@ -125,6 +125,9 @@ export default function Projects() {
   };
 
   const handleDelete = async (id: number) => {
+    if (!window.confirm("Tem certeza que deseja deletar este projeto? Esta ação não pode ser desfeita.")) {
+      return;
+    }
     try {
       await deleteMutation.mutateAsync({ id });
       toast.success("Projeto deletado com sucesso");

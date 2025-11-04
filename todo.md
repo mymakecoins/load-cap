@@ -251,3 +251,13 @@
 - [x] Adicionar status "Go Live" ao enum de status de projetos
 - [x] Atualizar componentes da interface para exibir os novos status
 
+
+
+## Confirmação de Deleção - Sessão Atual
+
+- [x] Adicionar window.confirm() em Clientes (deletar cliente)
+- [x] Adicionar window.confirm() em Colaboradores (deletar colaborador)
+- [x] Adicionar window.confirm() em Projetos (deletar projeto)
+- [x] Adicionar window.confirm() em Usuários (deletar usuário)
+- [x] Adicionar window.confirm() em Alocações (deletar alocação)
+

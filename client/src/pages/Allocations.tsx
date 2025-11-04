@@ -91,6 +91,9 @@ export default function Allocations() {
   };
 
   const handleDelete = async (id: number) => {
+    if (!window.confirm("Tem certeza que deseja deletar esta alocação? Esta ação não pode ser desfeita.")) {
+      return;
+    }
     try {
       await deleteMutation.mutateAsync({ id });
       toast.success("Alocação deletada com sucesso");

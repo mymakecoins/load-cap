@@ -96,7 +96,7 @@ export default function Users() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Tem certeza que deseja deletar este usuário?")) return;
+    if (!window.confirm("Tem certeza que deseja deletar este usuário? Esta ação não pode ser desfeita.")) return;
 
     try {
       await deleteMutation.mutateAsync({ id });
