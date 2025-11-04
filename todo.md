@@ -272,3 +272,9 @@
 - [x] Adicionar botão "Semana Atual" ao modal de Nova Alocação
 - [x] Adicionar botão "Semana Seguinte" ao modal de Nova Alocação
 
+
+
+## Bugs Críticos - Sessão Atual
+
+- [x] Erro de validação de email em Clientes: Padrão regex rejeita emails válidos (mymakecoins@gmail.com) (CORRIGIDO: Alterado para regex mais permissivo)
+
