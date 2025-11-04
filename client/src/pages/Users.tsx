@@ -250,7 +250,7 @@ export default function Users() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((user: any) => (
+                  {users.sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR')).map((user: any) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell>{user.email}</TableCell>

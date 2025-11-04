@@ -204,7 +204,7 @@ export default function Projects() {
                       <SelectValue placeholder="Selecione um cliente" />
                     </SelectTrigger>
                     <SelectContent>
-                      {clients?.map((client) => (
+                      {clients?.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((client) => (
                         <SelectItem key={client.id} value={client.id.toString()}>
                           {client.name}
                         </SelectItem>
@@ -236,7 +236,7 @@ export default function Projects() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="0">Nenhum</SelectItem>
-                    {employees?.filter(e => e.type === "manager").map((emp) => (
+                    {employees?.filter(e => e.type === "manager").sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((emp) => (
                       <SelectItem key={emp.id} value={emp.id.toString()}>
                         {emp.name}
                       </SelectItem>
@@ -314,7 +314,7 @@ export default function Projects() {
                 </TableHeader>
                 <TableBody>
                   {projects && projects.length > 0 ? (
-                    projects.map((project) => (
+                    projects.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((project) => (
                       <TableRow key={project.id}>
                         <TableCell className="font-medium">{project.name}</TableCell>
                         <TableCell>

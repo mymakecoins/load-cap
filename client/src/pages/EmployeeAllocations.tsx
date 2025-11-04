@@ -61,7 +61,7 @@ export default function EmployeeAllocations() {
   }
 
   // Calcular taxa de utilização para cada colaborador
-  const employeeUtilization = filteredEmployees.map(emp => {
+  const employeeUtilization = filteredEmployees.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map(emp => {
     let empAllocations = allocations?.filter(a => a.employeeId === emp.id) || [];
     
     // Filtrar por datas se especificadas

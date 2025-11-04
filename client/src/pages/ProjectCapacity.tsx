@@ -84,7 +84,7 @@ export default function ProjectCapacity() {
               {projLoading ? (
                 <SelectItem value="loading" disabled>Carregando...</SelectItem>
               ) : projects && projects.length > 0 ? (
-                projects.map((proj) => (
+                projects.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((proj) => (
                   <SelectItem key={proj.id} value={proj.id.toString()}>
                     {proj.name}
                   </SelectItem>

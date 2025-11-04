@@ -284,3 +284,16 @@
 
 - [x] Adicionar coluna com totalizador de quantidade de projetos por colaborador em Alocação Dev
 
+
+
+## Ordenação Alfabética de Listas - Sessão Atual
+
+- [x] Organizar em ordem alfabética: Modal de Nova Alocação (Colaboradores e Projetos)
+- [x] Organizar em ordem alfabética: Lista de Alocação na página de Alocações
+- [x] Organizar em ordem alfabética: Lista de Projetos na página de Projetos
+- [x] Organizar em ordem alfabética: Lista de Colaboradores na página de Colaboradores
+- [x] Organizar em ordem alfabética: Lista de Clientes na página de Clientes
+- [x] Organizar em ordem alfabética: Listagem de Colaboradores em Alocação por Desenvolvedor
+- [x] Organizar em ordem alfabética: Lista de Projetos em Capacidade por Projeto
+- [x] Organizar em ordem alfabética: Lista de Usuários na página de Gerenciamento de Usuários
+

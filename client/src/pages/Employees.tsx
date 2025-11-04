@@ -199,7 +199,7 @@ export default function Employees() {
                 </TableHeader>
                 <TableBody>
                   {employees && employees.length > 0 ? (
-                    employees.map((employee) => (
+                    employees.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((employee) => (
                       <TableRow key={employee.id}>
                         <TableCell className="font-medium">{employee.name}</TableCell>
                         <TableCell>{employee.email}</TableCell>

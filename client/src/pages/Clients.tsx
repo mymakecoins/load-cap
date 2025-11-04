@@ -169,7 +169,7 @@ export default function Clients() {
                 </TableHeader>
                 <TableBody>
                   {clients && clients.length > 0 ? (
-                    clients.map((client) => (
+                    clients.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((client) => (
                       <TableRow key={client.id}>
                         <TableCell className="font-medium">{client.name}</TableCell>
                         <TableCell>{client.email || "-"}</TableCell>

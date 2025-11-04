@@ -177,7 +177,7 @@ export default function Allocations() {
                       <SelectValue placeholder="Selecione um colaborador" />
                     </SelectTrigger>
                     <SelectContent>
-                      {employees?.map((emp) => (
+                      {employees?.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((emp) => (
                         <SelectItem key={emp.id} value={emp.id.toString()}>
                           {emp.name}
                         </SelectItem>
@@ -192,7 +192,7 @@ export default function Allocations() {
                       <SelectValue placeholder="Selecione um projeto" />
                     </SelectTrigger>
                     <SelectContent>
-                      {projects?.map((proj) => (
+                      {projects?.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((proj) => (
                         <SelectItem key={proj.id} value={proj.id.toString()}>
                           {proj.name}
                         </SelectItem>
@@ -298,7 +298,11 @@ export default function Allocations() {
                 </TableHeader>
                 <TableBody>
                   {allocations && allocations.length > 0 ? (
-                    allocations.map((alloc) => (
+                    allocations.sort((a, b) => {
+                      const empA = employees?.find(e => e.id === a.employeeId)?.name || "";
+                      const empB = employees?.find(e => e.id === b.employeeId)?.name || "";
+                      return empA.localeCompare(empB, 'pt-BR');
+                    }).map((alloc) => (
                       <TableRow key={alloc.id}>
                         <TableCell className="font-medium">
                           {employees?.find(e => e.id === alloc.employeeId)?.name || "-"}
