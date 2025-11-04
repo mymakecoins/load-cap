@@ -31,6 +31,50 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Plus, Trash2, Edit2 } from "lucide-react";
 
+// Função para calcular segunda-feira da semana atual
+function getMondayCurrentWeek(): string {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const daysToMonday = dayOfWeek === 0 ? 1 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + daysToMonday);
+  return monday.toISOString().split('T')[0];
+}
+
+// Função para calcular sexta-feira da semana atual
+function getFridayCurrentWeek(): string {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const daysToMonday = dayOfWeek === 0 ? 1 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + daysToMonday);
+  const friday = new Date(monday);
+  friday.setDate(monday.getDate() + 4);
+  return friday.toISOString().split('T')[0];
+}
+
+// Função para calcular segunda-feira da próxima semana
+function getMondayNextWeek(): string {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const daysToMonday = dayOfWeek === 0 ? 1 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + daysToMonday + 7);
+  return monday.toISOString().split('T')[0];
+}
+
+// Função para calcular sexta-feira da próxima semana
+function getFridayNextWeek(): string {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const daysToMonday = dayOfWeek === 0 ? 1 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + daysToMonday + 7);
+  const friday = new Date(monday);
+  friday.setDate(monday.getDate() + 4);
+  return friday.toISOString().split('T')[0];
+}
+
 export default function Allocations() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -188,6 +232,36 @@ export default function Allocations() {
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                   />
                 </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setFormData({
+                      ...formData,
+                      startDate: getMondayCurrentWeek(),
+                      endDate: getFridayCurrentWeek(),
+                    });
+                  }}
+                >
+                  Semana Atual
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setFormData({
+                      ...formData,
+                      startDate: getMondayNextWeek(),
+                      endDate: getFridayNextWeek(),
+                    });
+                  }}
+                >
+                  Semana Seguinte
+                </Button>
               </div>
               <Button type="submit" className="w-full">
                 {editingId ? "Atualizar" : "Criar"}

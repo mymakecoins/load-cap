@@ -261,3 +261,14 @@
 - [x] Adicionar window.confirm() em Usuários (deletar usuário)
 - [x] Adicionar window.confirm() em Alocações (deletar alocação)
 
+
+
+## Botões de Semana em Alocações - Sessão Atual
+
+- [x] Criar função para calcular segunda-feira da semana atual
+- [x] Criar função para calcular sexta-feira da semana atual
+- [x] Criar função para calcular segunda-feira da próxima semana
+- [x] Criar função para calcular sexta-feira da próxima semana
+- [x] Adicionar botão "Semana Atual" ao modal de Nova Alocação
+- [x] Adicionar botão "Semana Seguinte" ao modal de Nova Alocação
+
