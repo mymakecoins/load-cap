@@ -278,3 +278,9 @@
 
 - [x] Erro de validação de email em Clientes: Padrão regex rejeita emails válidos (mymakecoins@gmail.com) (CORRIGIDO: Alterado para regex mais permissivo)
 
+
+
+## Coluna de Projetos em Alocação Dev - Sessão Atual
+
+- [x] Adicionar coluna com totalizador de quantidade de projetos por colaborador em Alocação Dev
+

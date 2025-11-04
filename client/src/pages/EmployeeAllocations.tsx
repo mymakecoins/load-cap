@@ -62,14 +62,30 @@ export default function EmployeeAllocations() {
 
   // Calcular taxa de utilização para cada colaborador
   const employeeUtilization = filteredEmployees.map(emp => {
-    const empAllocations = allocations?.filter(a => a.employeeId === emp.id) || [];
+    let empAllocations = allocations?.filter(a => a.employeeId === emp.id) || [];
+    
+    // Filtrar por datas se especificadas
+    if (startDate || endDate) {
+      empAllocations = empAllocations.filter(a => {
+        const allocStart = a.startDate ? new Date(a.startDate) : null;
+        if (startDate && allocStart && allocStart < new Date(startDate)) return false;
+        if (endDate && allocStart && allocStart > new Date(endDate)) return false;
+        return true;
+      });
+    }
+    
     const totalAllocated = empAllocations.reduce((sum, a) => sum + a.allocatedHours, 0);
     const monthlyCapacity = emp.monthlyCapacityHours || 0;
     const utilizationRate = monthlyCapacity > 0 ? ((totalAllocated / monthlyCapacity) * 100) : 0;
+    
+    // Contar quantidade de projetos unicos
+    const uniqueProjects = new Set(empAllocations.map(a => a.projectId)).size;
+    
     return {
       ...emp,
       totalAllocated,
       utilizationRate: parseFloat(utilizationRate.toFixed(1)),
+      projectCount: uniqueProjects,
     };
   });
 
@@ -195,6 +211,7 @@ export default function EmployeeAllocations() {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Tipo</TableHead>
+                  <TableHead className="text-right">Projetos</TableHead>
                   <TableHead className="text-right">Taxa de Utilização</TableHead>
                 </TableRow>
               </TableHeader>
@@ -210,6 +227,7 @@ export default function EmployeeAllocations() {
                     >
                       <TableCell className="font-medium">{emp.name}</TableCell>
                       <TableCell>{getEmployeeTypeLabel(emp.type)}</TableCell>
+                      <TableCell className="text-right font-semibold">{emp.projectCount}</TableCell>
                       <TableCell className="text-right">
                         <span className={`font-semibold ${
                           emp.utilizationRate > 100 ? "text-red-600" :
@@ -223,7 +241,7 @@ export default function EmployeeAllocations() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                       Nenhum colaborador encontrado
                     </TableCell>
                   </TableRow>
