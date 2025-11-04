@@ -44,6 +44,7 @@ const EMPLOYEE_TYPES = [
 export default function Employees() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -173,6 +174,28 @@ export default function Employees() {
         </Dialog>
       </div>
 
+      {/* Filtro por Tipo */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtrar por Tipo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Select value={selectedType || ""} onValueChange={(value) => setSelectedType(value || null)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Todos os tipos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todos os tipos</SelectItem>
+              {EMPLOYEE_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Lista de Colaboradores</CardTitle>
@@ -199,7 +222,10 @@ export default function Employees() {
                 </TableHeader>
                 <TableBody>
                   {employees && employees.length > 0 ? (
-                    employees.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((employee) => (
+                    employees
+                      .filter(e => !selectedType || e.type === selectedType)
+                      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+                      .map((employee) => (
                       <TableRow key={employee.id}>
                         <TableCell className="font-medium">{employee.name}</TableCell>
                         <TableCell>{employee.email}</TableCell>

@@ -297,3 +297,9 @@
 - [x] Organizar em ordem alfabética: Lista de Projetos em Capacidade por Projeto
 - [x] Organizar em ordem alfabética: Lista de Usuários na página de Gerenciamento de Usuários
 
+
+
+## Filtros em Colaboradores - Sessão Atual
+
+- [x] Adicionar filtro por tipo de colaborador na página de Colaboradores
+
