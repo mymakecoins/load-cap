@@ -303,3 +303,9 @@
 
 - [x] Adicionar filtro por tipo de colaborador na página de Colaboradores
 
+
+
+## Bugs Críticos - Sessão Atual (Filtro de Colaboradores)
+
+- [x] Erro: SelectItem com value vazio no filtro de tipo de colaborador (CORRIGIDO: Usar value="all" em vez de value="")
+

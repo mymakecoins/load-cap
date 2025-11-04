@@ -180,12 +180,12 @@ export default function Employees() {
           <CardTitle>Filtrar por Tipo</CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={selectedType || ""} onValueChange={(value) => setSelectedType(value || null)}>
+          <Select value={selectedType || "all"} onValueChange={(value) => setSelectedType(value === "all" ? null : value)}>
             <SelectTrigger>
               <SelectValue placeholder="Todos os tipos" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os tipos</SelectItem>
+              <SelectItem value="all">Todos os tipos</SelectItem>
               {EMPLOYEE_TYPES.map((type) => (
                 <SelectItem key={type.value} value={type.value}>
                   {type.label}
