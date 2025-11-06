@@ -191,11 +191,15 @@ export default function Projects() {
                     id="plannedProgress"
                     type="number"
                     min="0"
-                    max="100"
+                    max="99"
                     value={formData.plannedProgress}
-                    onChange={(e) => setFormData({ ...formData, plannedProgress: Math.max(0, parseInt(e.target.value) || 0) })}
+                    onChange={(e) => {
+                      let value = parseInt(e.target.value) || 0;
+                      value = Math.max(0, Math.min(99, value));
+                      setFormData({ ...formData, plannedProgress: value });
+                    }}
                     required
-                    placeholder="0-100"
+                    placeholder="0-99"
                   />
                 </div>
                 <div>
@@ -204,11 +208,15 @@ export default function Projects() {
                     id="actualProgress"
                     type="number"
                     min="0"
-                    max="100"
+                    max="99"
                     value={formData.actualProgress}
-                    onChange={(e) => setFormData({ ...formData, actualProgress: Math.max(0, parseInt(e.target.value) || 0) })}
+                    onChange={(e) => {
+                      let value = parseInt(e.target.value) || 0;
+                      value = Math.max(0, Math.min(99, value));
+                      setFormData({ ...formData, actualProgress: value });
+                    }}
                     required
-                    placeholder="0-100"
+                    placeholder="0-99"
                   />
                 </div>
               </div>
