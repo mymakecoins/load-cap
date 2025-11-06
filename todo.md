@@ -309,3 +309,9 @@
 
 - [x] Erro: SelectItem com value vazio no filtro de tipo de colaborador (CORRIGIDO: Usar value="all" em vez de value="")
 
+
+
+## Bugs Críticos - Validação de Status de Projetos
+
+- [x] Erro de validação de status em Projetos: Novos status (discovery, homologacao, delivery, go_live) não estão incluídos na validação do servidor (CORRIGIDO: Adicionados todos os 8 status ao enum de validação)
+

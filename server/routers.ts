@@ -193,7 +193,7 @@ export const appRouter = router({
         actualEndDate: z.date().optional(),
         plannedProgress: z.number().int().min(0).max(100).optional(),
         actualProgress: z.number().int().min(0).max(100).optional(),
-        status: z.enum(["planejamento", "em_andamento", "concluido", "pausado"]).optional(),
+        status: z.enum(["planejamento", "discovery", "em_andamento", "homologacao", "delivery", "go_live", "concluido", "pausado"]).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const project = await db.getProjectById(input.id);
