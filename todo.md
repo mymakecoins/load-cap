@@ -315,3 +315,11 @@
 
 - [x] Erro de validação de status em Projetos: Novos status (discovery, homologacao, delivery, go_live) não estão incluídos na validação do servidor (CORRIGIDO: Adicionados todos os 8 status ao enum de validação)
 
+
+
+## Buscas - Sessão Atual
+
+- [x] Implementar busca em Clientes (nome e empresa)
+- [x] Implementar busca em Colaboradores (nome)
+- [x] Implementar busca em Projetos (nome, empresa, cliente)
+

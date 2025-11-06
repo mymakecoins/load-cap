@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,8 +28,18 @@ export default function Clients() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", company: "" });
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: clients, isLoading, refetch } = trpc.clients.list.useQuery();
+
+  const filteredClients = useMemo(() => {
+    if (!clients) return [];
+    const query = searchQuery.toLowerCase();
+    return clients.filter((client: any) => 
+      client.name.toLowerCase().includes(query) ||
+      (client.company && client.company.toLowerCase().includes(query))
+    ).sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [clients, searchQuery]);
   const createMutation = trpc.clients.create.useMutation();
   const updateMutation = trpc.clients.update.useMutation();
   const deleteMutation = trpc.clients.delete.useMutation();
@@ -147,6 +157,14 @@ export default function Clients() {
         <CardHeader>
           <CardTitle>Lista de Clientes</CardTitle>
           <CardDescription>Todos os clientes cadastrados no sistema</CardDescription>
+          <div className="mt-4">
+            <Input
+              placeholder="Buscar por nome ou empresa..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -168,8 +186,8 @@ export default function Clients() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {clients && clients.length > 0 ? (
-                    clients.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((client) => (
+                  {filteredClients && filteredClients.length > 0 ? (
+                    filteredClients.map((client) => (
                       <TableRow key={client.id}>
                         <TableCell className="font-medium">{client.name}</TableCell>
                         <TableCell>{client.email || "-"}</TableCell>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,7 @@ export default function Employees() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -53,6 +54,16 @@ export default function Employees() {
   });
 
   const { data: employees, isLoading, refetch } = trpc.employees.list.useQuery();
+
+  const filteredEmployees = useMemo(() => {
+    if (!employees) return [];
+    const query = searchQuery.toLowerCase();
+    return employees.filter((emp: any) => {
+      const matchesSearch = emp.name.toLowerCase().includes(query);
+      const matchesType = !selectedType || emp.type === selectedType;
+      return matchesSearch && matchesType;
+    }).sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [employees, searchQuery, selectedType]);
   const createMutation = trpc.employees.create.useMutation();
   const updateMutation = trpc.employees.update.useMutation();
   const deleteMutation = trpc.employees.delete.useMutation();
@@ -200,6 +211,27 @@ export default function Employees() {
         <CardHeader>
           <CardTitle>Lista de Colaboradores</CardTitle>
           <CardDescription>Todos os colaboradores cadastrados no sistema</CardDescription>
+          <div className="mt-4 flex gap-4">
+            <Input
+              placeholder="Buscar por nome..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+            <Select value={selectedType || "all"} onValueChange={(value) => setSelectedType(value === "all" ? null : value)}>
+              <SelectTrigger className="max-w-xs">
+                <SelectValue placeholder="Filtrar por tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                {EMPLOYEE_TYPES.sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')).map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -221,11 +253,8 @@ export default function Employees() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {employees && employees.length > 0 ? (
-                    employees
-                      .filter(e => !selectedType || e.type === selectedType)
-                      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
-                      .map((employee) => (
+                  {filteredEmployees && filteredEmployees.length > 0 ? (
+                    filteredEmployees.map((employee) => (
                       <TableRow key={employee.id}>
                         <TableCell className="font-medium">{employee.name}</TableCell>
                         <TableCell>{employee.email}</TableCell>

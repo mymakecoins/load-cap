@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,7 @@ const PROJECT_STATUS = [
 export default function Projects() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     clientId: 0,
@@ -66,6 +67,20 @@ export default function Projects() {
   const { data: projects, isLoading: projLoading, refetch } = trpc.projects.list.useQuery();
   const { data: clients } = trpc.clients.list.useQuery();
   const { data: employees } = trpc.employees.list.useQuery();
+
+  const filteredProjects = useMemo(() => {
+    if (!projects) return [];
+    const query = searchQuery.toLowerCase();
+    return projects.filter((proj: any) => {
+      const clientName = clients?.find((c: any) => c.id === proj.clientId)?.name || "";
+      const clientCompany = clients?.find((c: any) => c.id === proj.clientId)?.company || "";
+      return (
+        proj.name.toLowerCase().includes(query) ||
+        clientName.toLowerCase().includes(query) ||
+        clientCompany.toLowerCase().includes(query)
+      );
+    }).sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [projects, searchQuery, clients]);
   
   const createMutation = trpc.projects.create.useMutation();
   const updateMutation = trpc.projects.update.useMutation();
@@ -291,6 +306,14 @@ export default function Projects() {
         <CardHeader>
           <CardTitle>Lista de Projetos</CardTitle>
           <CardDescription>Todos os projetos cadastrados no sistema</CardDescription>
+          <div className="mt-4">
+            <Input
+              placeholder="Buscar por nome do projeto, empresa ou cliente..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {projLoading ? (
@@ -313,8 +336,8 @@ export default function Projects() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {projects && projects.length > 0 ? (
-                    projects.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((project) => (
+                  {filteredProjects && filteredProjects.length > 0 ? (
+                    filteredProjects.map((project) => (
                       <TableRow key={project.id}>
                         <TableCell className="font-medium">{project.name}</TableCell>
                         <TableCell>
