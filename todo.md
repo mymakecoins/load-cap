@@ -357,3 +357,11 @@
 - [x] Aumentar altura do gráfico de alocação por projeto para melhor visualização
 
 
+
+
+## Modificação do Gráfico de Distribuição - Sessão Atual
+
+- [x] Converter gráfico de "Distribuição por Tipo de Profissional" de PieChart para BarChart
+- [ ] Salvar checkpoint com a modificação
+
+
