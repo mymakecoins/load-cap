@@ -5,6 +5,20 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 
 const COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"];
 
+// Custom tooltip to show absolute values
+const CustomTooltip = (props: any) => {
+  const { active, payload } = props;
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-2 border border-gray-300 rounded shadow">
+        <p className="text-sm font-semibold">{payload[0].payload.name}</p>
+        <p className="text-sm">{payload[0].value} colaboradores</p>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function Dashboard() {
   const { data: allocations, isLoading: allocLoading } = trpc.allocations.list.useQuery();
   const { data: employees, isLoading: empLoading } = trpc.employees.list.useQuery();
@@ -33,10 +47,15 @@ export default function Dashboard() {
     requirements_analyst: "Analista de Requisitos",
   };
 
-  const employeeTypeData = Object.entries(employeesByType).map(([type, count]) => ({
-    name: typeLabels[type] || type.charAt(0).toUpperCase() + type.slice(1),
-    value: count,
-  }));
+  const totalEmployees = Object.values(employeesByType).reduce((sum, count) => sum + count, 0);
+  const employeeTypeData = Object.entries(employeesByType).map(([type, count]) => {
+    const pct = totalEmployees > 0 ? parseFloat(((count / totalEmployees) * 100).toFixed(1)) : 0;
+    return {
+      name: typeLabels[type] || type.charAt(0).toUpperCase() + type.slice(1),
+      value: count,
+      percentage: pct,
+    };
+  });
 
   // Distribuição por projeto
   const allocationByProject = allocations?.reduce((acc: Record<number, number>, alloc) => {
@@ -126,15 +145,24 @@ export default function Dashboard() {
             {isLoading ? (
               <Skeleton className="h-64 w-full" />
             ) : employeeTypeData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={employeeTypeData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#3b82f6" label={{ position: 'top' }} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="relative">
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={employeeTypeData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="value" fill="#3b82f6" />
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="absolute top-8 left-0 right-0 flex justify-around px-12 pointer-events-none">
+                  {employeeTypeData.map((entry: any, index: number) => (
+                    <div key={`pct-${index}`} className="text-center text-sm font-bold text-gray-900">
+                      {entry.percentage}%
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : (
               <div className="h-64 flex items-center justify-center text-muted-foreground">
                 Nenhum dado disponível
