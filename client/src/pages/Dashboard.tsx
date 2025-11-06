@@ -49,7 +49,7 @@ export default function Dashboard() {
 
   const totalEmployees = Object.values(employeesByType).reduce((sum, count) => sum + count, 0);
   const employeeTypeData = Object.entries(employeesByType).map(([type, count]) => {
-    const pct = totalEmployees > 0 ? parseFloat(((count / totalEmployees) * 100).toFixed(1)) : 0;
+    const pct = totalEmployees > 0 ? Math.round((count / totalEmployees) * 100) : 0;
     return {
       name: typeLabels[type] || type.charAt(0).toUpperCase() + type.slice(1),
       value: count,
@@ -150,12 +150,12 @@ export default function Dashboard() {
                   <BarChart data={employeeTypeData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
-                    <YAxis />
+                    <YAxis domain={[0, 50]} />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar dataKey="value" fill="#3b82f6" />
                   </BarChart>
                 </ResponsiveContainer>
-                <div className="absolute top-8 left-0 right-0 flex justify-around px-12 pointer-events-none">
+                <div className="absolute top-1/2 left-0 right-0 flex justify-around px-12 pointer-events-none transform -translate-y-1/2">
                   {employeeTypeData.map((entry: any, index: number) => (
                     <div key={`pct-${index}`} className="text-center text-sm font-bold text-gray-900">
                       {entry.percentage}%
