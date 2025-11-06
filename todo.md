@@ -365,3 +365,11 @@
 - [ ] Salvar checkpoint com a modificação
 
 
+
+
+## Adição de Rótulos nas Barras - Sessão Atual
+
+- [x] Adicionar rótulos com valores acima das barras no gráfico de "Distribuição por Tipo de Profissional"
+- [ ] Salvar checkpoint com a modificação
+
+
