@@ -101,8 +101,15 @@ export default function Users() {
       return;
     }
 
-    // Validar senha ao criar novo usuário
+    // Validar senha ao criar novo usuário ou se estiver editando e preencheu nova senha
     if (!editingId) {
+      const validation = validatePassword(formData.password);
+      if (!validation.valid) {
+        toast.error("Senha não atende aos requisitos");
+        return;
+      }
+    } else if (formData.password) {
+      // Se está editando e preencheu uma nova senha, validar
       const validation = validatePassword(formData.password);
       if (!validation.valid) {
         toast.error("Senha não atende aos requisitos");
@@ -118,6 +125,7 @@ export default function Users() {
           email: formData.email,
           phone: formData.phone || undefined,
           role: formData.role,
+          ...(formData.password && { password: formData.password }),
         });
         toast.success("Usuário atualizado com sucesso");
       } else {
@@ -261,44 +269,45 @@ export default function Users() {
                 />
               </div>
 
-              {!editingId && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium">Senha *</label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        type="text"
-                        value={formData.password}
-                        onChange={(e) => handlePasswordChange(e.target.value)}
-                        placeholder="Gere ou digite uma senha"
-                        required
-                      />
+              {/* Campo de senha - obrigatório ao criar, opcional ao editar */}
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium">{editingId ? "Senha (opcional)" : "Senha *"}</label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      type="text"
+                      value={formData.password}
+                      onChange={(e) => handlePasswordChange(e.target.value)}
+                      placeholder={editingId ? "Deixe em branco para manter a senha atual" : "Gere ou digite uma senha"}
+                      required={!editingId}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGeneratePassword}
+                      className="gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Gerar
+                    </Button>
+                    {formData.password && (
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={handleGeneratePassword}
+                        onClick={handleCopyPassword}
                         className="gap-2"
                       >
-                        <RefreshCw className="w-4 h-4" />
-                        Gerar
+                        <Copy className="w-4 h-4" />
+                        Copiar
                       </Button>
-                      {formData.password && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleCopyPassword}
-                          className="gap-2"
-                        >
-                          <Copy className="w-4 h-4" />
-                          Copiar
-                        </Button>
-                      )}
-                    </div>
+                    )}
                   </div>
+                </div>
 
-                  {/* Requisitos de senha */}
+                {/* Requisitos de senha - mostrar apenas se houver senha preenchida */}
+                {formData.password && (
                   <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
                     <p className="text-xs font-semibold text-blue-900 mb-2">Requisitos de senha:</p>
                     <ul className="space-y-1 text-xs text-blue-800">
@@ -316,8 +325,8 @@ export default function Users() {
                       </li>
                     </ul>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               <div>
                 <label className="text-sm font-medium">Perfil *</label>
@@ -337,7 +346,7 @@ export default function Users() {
                 <Button type="button" variant="outline" onClick={handleClose}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending || (!editingId && passwordErrors.length > 0)}>
+                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending || (!editingId && passwordErrors.length > 0) || (editingId && formData.password && passwordErrors.length > 0) || false}>
                   {editingId ? "Atualizar" : "Criar"} Usuário
                 </Button>
               </div>
