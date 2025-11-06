@@ -339,3 +339,12 @@
 - [x] Testar se o percentual realizado é salvo corretamente
 
 
+
+
+## População de Alocações - Sessão Atual
+
+- [x] Criar script para popular alocações aleatoriamente
+- [x] Executar script para popular alocações para essa semana e próxima semana
+- [x] Validar que as alocações foram criadas corretamente
+
+
