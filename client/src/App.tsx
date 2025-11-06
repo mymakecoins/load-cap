@@ -15,35 +15,44 @@ import EmployeeAllocations from "./pages/EmployeeAllocations";
 import ProjectCapacity from "./pages/ProjectCapacity";
 import AllocationHistory from "./pages/AllocationHistory";
 import Users from "./pages/Users";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import { useAuth } from "./_core/hooks/useAuth";
 
 function Router() {
   const { isAuthenticated } = useAuth();
   
-  if (!isAuthenticated) {
-    return (
-      <Switch>
-        <Route path={"*"} component={Home} />
-      </Switch>
-    );
-  }
-  
   return (
-    <DashboardLayout>
-      <Switch>
-        <Route path={"/"} component={Dashboard} />
-        <Route path={"/clientes"} component={Clients} />
-        <Route path={"/colaboradores"} component={Employees} />
-        <Route path={"/projetos"} component={Projects} />
-        <Route path={"/alocacoes"} component={Allocations} />
-        <Route path={"/alocacao-desenvolvedor"} component={EmployeeAllocations} />
-        <Route path={"/capacidade-projeto"} component={ProjectCapacity} />
-        <Route path={"/historico-alocacoes"} component={AllocationHistory} />
-        <Route path={"/usuarios"} component={Users} />
-        <Route path={"/404"} component={NotFound} />
-        <Route component={NotFound} />
-      </Switch>
-    </DashboardLayout>
+    <Switch>
+      {/* Public auth routes - always accessible */}
+      <Route path={"/login"} component={Login} />
+      <Route path={"/register"} component={Register} />
+      
+      {/* Protected routes - require authentication */}
+      {isAuthenticated ? (
+        <>
+          <DashboardLayout>
+            <Route path={"/"} component={Dashboard} />
+            <Route path={"/clientes"} component={Clients} />
+            <Route path={"/colaboradores"} component={Employees} />
+            <Route path={"/projetos"} component={Projects} />
+            <Route path={"/alocacoes"} component={Allocations} />
+            <Route path={"/alocacao-desenvolvedor"} component={EmployeeAllocations} />
+            <Route path={"/capacidade-projeto"} component={ProjectCapacity} />
+            <Route path={"/historico-alocacoes"} component={AllocationHistory} />
+            <Route path={"/usuarios"} component={Users} />
+            <Route path={"/404"} component={NotFound} />
+            <Route component={NotFound} />
+          </DashboardLayout>
+        </>
+      ) : (
+        <>
+          <Route path={"/"} component={Home} />
+          <Route path={"/404"} component={NotFound} />
+          <Route component={Home} />
+        </>
+      )}
+    </Switch>
   );
 }
 

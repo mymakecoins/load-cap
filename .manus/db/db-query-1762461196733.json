@@ -1,0 +1,15 @@
+{
+  "query": "SELECT id, email, passwordHash FROM users WHERE email = 'maria@example.com';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4WdiMNhsdsPsN8w.root --database U8h3fnwL3fPTcSEcoFvCiC --execute SELECT id, email, passwordHash FROM users WHERE email = 'maria@example.com';",
+  "rows": [
+    {
+      "id": "2700062",
+      "email": "maria@example.com",
+      "passwordHash": "76871253ce3388930964b09e58dd1c6656ddf36045ecefeb13a0ab671ab4c95c"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tpasswordHash\n2700062\tmaria@example.com\t76871253ce3388930964b09e58dd1c6656ddf36045ecefeb13a0ab671ab4c95c\n",
+  "stderr": "",
+  "execution_time_ms": 49
+}

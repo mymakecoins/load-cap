@@ -257,17 +257,30 @@ class SDKServer {
   }
 
   async authenticateRequest(req: Request): Promise<User> {
-    // Regular authentication flow
     const cookies = this.parseCookies(req.headers.cookie);
     const sessionCookie = cookies.get(COOKIE_NAME);
-    const session = await this.verifySession(sessionCookie);
+    const signedInAt = new Date();
 
+    // Try local authentication first (numeric user ID)
+    if (sessionCookie && /^\d+$/.test(sessionCookie)) {
+      try {
+        const userId = parseInt(sessionCookie, 10);
+        const user = await db.getUserById(userId);
+        if (user) {
+          return user;
+        }
+      } catch (error) {
+        console.warn("[Auth] Local authentication failed:", error);
+      }
+    }
+
+    // Try Manus OAuth authentication
+    const session = await this.verifySession(sessionCookie);
     if (!session) {
       throw ForbiddenError("Invalid session cookie");
     }
 
     const sessionUserId = session.openId;
-    const signedInAt = new Date();
     let user = await db.getUserByOpenId(sessionUserId);
 
     // If user not in DB, sync from OAuth server automatically

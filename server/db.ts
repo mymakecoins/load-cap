@@ -304,3 +304,62 @@ export async function deleteUser(id: number) {
   return db.delete(users).where(eq(users.id, id));
 }
 
+
+
+// ===== LOCAL AUTH QUERIES =====
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createLocalUser(data: {
+  name: string;
+  email: string;
+  phone?: string;
+  password: string;
+  role?: 'admin' | 'coordinator' | 'manager' | 'developer';
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Hash password using SHA256 (in production, use bcrypt)
+  const passwordHash = createHash('sha256').update(data.password).digest('hex');
+  
+  return db.insert(users).values({
+    openId: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    name: data.name,
+    email: data.email,
+    phone: data.phone || null,
+    passwordHash: passwordHash,
+    role: data.role || 'developer',
+    loginMethod: 'email',
+    lastSignedIn: new Date(),
+  });
+}
+
+export async function updateUserPassword(id: number, newPassword: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const passwordHash = createHash('sha256').update(newPassword).digest('hex');
+  
+  return db.update(users).set({
+    passwordHash: passwordHash,
+    updatedAt: new Date(),
+  }).where(eq(users.id, id));
+}
+
+export async function verifyPassword(passwordHash: string, plainPassword: string): Promise<boolean> {
+  const hash = createHash('sha256').update(plainPassword).digest('hex');
+  return hash === passwordHash;
+}
+

@@ -5,6 +5,7 @@ import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import * as db from "./db";
+import { authRouter } from "./routers/auth";
 
 // Helper to check if user is coordinator
 const isCoordinator = (role: string) => role === "coordinator" || role === "admin";
@@ -12,17 +13,7 @@ const isManager = (role: string) => role === "manager" || role === "admin" || ro
 
 export const appRouter = router({
   system: systemRouter,
-
-  auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
-    }),
-  }),
+  auth: authRouter,
 
   // ===== CLIENTS ROUTER =====
   clients: router({
