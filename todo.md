@@ -348,3 +348,12 @@
 - [x] Validar que as alocações foram criadas corretamente
 
 
+
+
+## Ajuste de Layout do Dashboard - Sessão Atual
+
+- [x] Reduzir "Distribuição por Tipo de Profissional" para 1 coluna
+- [x] Aumentar "Alocação por Projeto" para 3 colunas (tela cheia)
+- [x] Aumentar altura do gráfico de alocação por projeto para melhor visualização
+
+

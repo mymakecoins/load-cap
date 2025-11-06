@@ -116,7 +116,7 @@ export default function Dashboard() {
       </div>
 
       {/* Charts */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-1">
         <Card>
           <CardHeader>
             <CardTitle>Distribuição por Tipo de Profissional</CardTitle>
@@ -152,8 +152,10 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+      </div>
 
-        <Card>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="md:col-span-3">
           <CardHeader>
             <CardTitle>Alocação por Projeto</CardTitle>
             <CardDescription>Horas alocadas em cada projeto</CardDescription>
@@ -162,7 +164,7 @@ export default function Dashboard() {
             {isLoading ? (
               <Skeleton className="h-64 w-full" />
             ) : projectData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={400}>
                 <BarChart data={projectData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
