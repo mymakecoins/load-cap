@@ -211,26 +211,13 @@ export default function Employees() {
         <CardHeader>
           <CardTitle>Lista de Colaboradores</CardTitle>
           <CardDescription>Todos os colaboradores cadastrados no sistema</CardDescription>
-          <div className="mt-4 flex gap-4">
+          <div className="mt-4">
             <Input
               placeholder="Buscar por nome..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="max-w-sm"
             />
-            <Select value={selectedType || "all"} onValueChange={(value) => setSelectedType(value === "all" ? null : value)}>
-              <SelectTrigger className="max-w-xs">
-                <SelectValue placeholder="Filtrar por tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os tipos</SelectItem>
-                {EMPLOYEE_TYPES.sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')).map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </CardHeader>
         <CardContent>
