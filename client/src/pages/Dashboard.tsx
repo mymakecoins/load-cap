@@ -44,7 +44,7 @@ export default function Dashboard() {
     fullstack: "Fullstack",
     qa: "QA",
     manager: "Gerente",
-    requirements_analyst: "Analista de Requisitos",
+    requirements_analyst: "A. Requisitos",
   };
 
   const totalEmployees = Object.values(employeesByType).reduce((sum, count) => sum + count, 0);
