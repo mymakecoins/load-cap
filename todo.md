@@ -323,3 +323,10 @@
 - [x] Implementar busca em Colaboradores (nome)
 - [x] Implementar busca em Projetos (nome, empresa, cliente)
 
+
+
+## Coluna Gerente de Projeto em Projetos - Sessão Atual
+
+- [x] Substituir coluna "Tipo" por "Gerente de Projeto" na página de Projetos
+
+

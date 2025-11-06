@@ -337,7 +337,7 @@ export default function Projects() {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Cliente</TableHead>
-                    <TableHead>Tipo</TableHead>
+                    <TableHead>Gerente de Projeto</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Andamento</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -352,7 +352,7 @@ export default function Projects() {
                           {clients?.find(c => c.id === project.clientId)?.name || "-"}
                         </TableCell>
                         <TableCell>
-                          {PROJECT_TYPES.find((t) => t.value === project.type)?.label || project.type}
+                          {employees?.find(e => e.id === project.managerId)?.name || "-"}
                         </TableCell>
                         <TableCell>
                           {PROJECT_STATUS.find((s) => s.value === project.status)?.label || project.status}
