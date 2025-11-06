@@ -162,6 +162,8 @@ export const appRouter = router({
         startDate: z.date().optional(),
         plannedEndDate: z.date().optional(),
         plannedProgress: z.number().int().min(0).max(100).optional(),
+        actualProgress: z.number().int().min(0).max(100).optional(),
+        status: z.enum(["planejamento", "discovery", "em_andamento", "homologacao", "delivery", "go_live", "concluido", "pausado"]).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         if (!isCoordinator(ctx.user?.role || "")) {
@@ -176,8 +178,8 @@ export const appRouter = router({
           plannedEndDate: input.plannedEndDate ?? null,
           actualEndDate: null,
           plannedProgress: input.plannedProgress || 0,
-          actualProgress: 0,
-          status: "planejamento",
+          actualProgress: input.actualProgress || 0,
+          status: input.status || "planejamento",
         });
       }),
     

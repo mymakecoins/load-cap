@@ -330,3 +330,12 @@
 - [x] Substituir coluna "Tipo" por "Gerente de Projeto" na página de Projetos
 
 
+
+
+## Bug: Percentual Realizado Não Salvo ao Criar Projeto
+
+- [x] Investigar por que o percentual realizado não está sendo salvo ao cadastrar novo projeto
+- [x] Corrigir o bug no procedimento de criação de projeto
+- [x] Testar se o percentual realizado é salvo corretamente
+
+
