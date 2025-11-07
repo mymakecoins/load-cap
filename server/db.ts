@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { eq, and, or, desc, ne, isNull, asc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, clients, employees, projects, allocations, allocationHistory, Client, Employee, Project, Allocation, AllocationHistory } from "../drizzle/schema";
+import { InsertUser, users, clients, employees, projects, allocations, allocationHistory, projectLogEntries, Client, Employee, Project, Allocation, AllocationHistory } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -361,5 +361,78 @@ export async function updateUserPassword(id: number, newPassword: string) {
 export async function verifyPassword(passwordHash: string, plainPassword: string): Promise<boolean> {
   const hash = createHash('sha256').update(plainPassword).digest('hex');
   return hash === passwordHash;
+}
+
+
+
+// Project Log Entries queries
+export async function getProjectLogEntriesByProject(projectId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db
+    .select({
+      id: projectLogEntries.id,
+      projectId: projectLogEntries.projectId,
+      userId: projectLogEntries.userId,
+      title: projectLogEntries.title,
+      content: projectLogEntries.content,
+      createdAt: projectLogEntries.createdAt,
+      updatedAt: projectLogEntries.updatedAt,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(projectLogEntries)
+    .leftJoin(users, eq(projectLogEntries.userId, users.id))
+    .where(eq(projectLogEntries.projectId, projectId))
+    .orderBy(desc(projectLogEntries.createdAt));
+  
+  return result;
+}
+
+export async function createProjectLogEntry(data: {
+  projectId: number;
+  userId: number;
+  title: string;
+  content: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(projectLogEntries).values(data);
+  return result;
+}
+
+export async function getProjectsByManagerId(managerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db
+    .select()
+    .from(projects)
+    .where(and(
+      eq(projects.managerId, managerId),
+      eq(projects.isDeleted, false),
+      ne(projects.status, 'concluido')
+    ))
+    .orderBy(asc(projects.name));
+  
+  return result;
+}
+
+export async function getActiveProjects() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db
+    .select()
+    .from(projects)
+    .where(and(
+      eq(projects.isDeleted, false),
+      ne(projects.status, 'concluido')
+    ))
+    .orderBy(asc(projects.name));
+  
+  return result;
 }
 

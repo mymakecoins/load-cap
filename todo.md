@@ -394,3 +394,20 @@
 - [x] Implementar a correção
 - [x] Testar e validar que o erro 404 não aparece mais
 
+
+
+
+## Funcionalidade: Diário de Bordo
+
+- [x] Criar schema da tabela project_log_entries no banco de dados
+- [x] Implementar procedures no backend (list, create, getByProject)
+- [x] Instalar e configurar Quill.js no frontend
+- [x] Criar página de listagem de projetos com filtro por permissão
+- [x] Criar formulário de nova nota com editor Quill.js
+- [x] Criar página de visualização do diário com accordion
+- [x] Implementar regra: primeiro registro expandido, demais colapsados
+- [x] Implementar visualização compacta (data/hora + título)
+- [x] Implementar visualização completa ao expandir
+- [ ] Testar filtro de projetos por role (gerente vs admin/coordenador)
+- [ ] Validar todas as regras de negócio
+

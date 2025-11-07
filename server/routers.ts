@@ -400,6 +400,55 @@ export const appRouter = router({
         return db.deleteUser(input.id);
       }),
   }),
+
+  // ===== PROJECT LOG ROUTER =====
+  projectLog: router({
+    // List projects for diary (filtered by role)
+    listProjects: protectedProcedure.query(async ({ ctx }) => {
+      const userRole = ctx.user?.role || "";
+      
+      // Admin and coordinator see all active projects
+      if (isCoordinator(userRole)) {
+        return db.getActiveProjects();
+      }
+      
+      // Managers see only their projects
+      if (isManager(userRole)) {
+        return db.getProjectsByManagerId(ctx.user!.id);
+      }
+      
+      // Other roles see no projects
+      return [];
+    }),
+    
+    // Get log entries for a project
+    getByProject: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getProjectLogEntriesByProject(input.projectId);
+      }),
+    
+    // Create a new log entry
+    create: protectedProcedure
+      .input(z.object({
+        projectId: z.number(),
+        title: z.string().min(1, "Título é obrigatório"),
+        content: z.string().min(1, "Conteúdo é obrigatório"),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        // Only managers, coordinators and admins can create log entries
+        if (!isManager(ctx.user?.role || "")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Apenas gerentes, coordenadores e administradores podem criar entradas no diário" });
+        }
+        
+        return db.createProjectLogEntry({
+          projectId: input.projectId,
+          userId: ctx.user!.id,
+          title: input.title,
+          content: input.content,
+        });
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

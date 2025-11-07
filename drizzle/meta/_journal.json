@@ -43,6 +43,13 @@
       "when": 1761922895388,
       "tag": "0005_cute_flatman",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1762516115271,
+      "tag": "0006_ancient_living_mummy",
+      "breakpoints": true
     }
   ]
 }

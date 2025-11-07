@@ -124,6 +124,22 @@ export type AllocationHistory = typeof allocationHistory.$inferSelect;
 export type InsertAllocationHistory = typeof allocationHistory.$inferInsert;
 
 /**
+ * Project Log Entries table - stores project diary/log entries
+ */
+export const projectLogEntries = mysqlTable("project_log_entries", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProjectLogEntry = typeof projectLogEntries.$inferSelect;
+export type InsertProjectLogEntry = typeof projectLogEntries.$inferInsert;
+
+/**
  * Relations
  */
 export const clientsRelations = relations(clients, ({ many }) => ({
@@ -167,5 +183,16 @@ export const allocationHistoryRelations = relations(allocationHistory, ({ one })
   project: one(projects, {
     fields: [allocationHistory.projectId],
     references: [projects.id],
+  }),
+}));
+
+export const projectLogEntriesRelations = relations(projectLogEntries, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectLogEntries.projectId],
+    references: [projects.id],
+  }),
+  user: one(users, {
+    fields: [projectLogEntries.userId],
+    references: [users.id],
   }),
 }));
