@@ -234,7 +234,7 @@ export default function Employees() {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Tipo</TableHead>
+                    <TableHead>Tipo do Colaborador</TableHead>
                     <TableHead>Capacidade (h/mês)</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
