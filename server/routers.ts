@@ -356,10 +356,7 @@ export const appRouter = router({
   }),
 
   users: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      if (!isCoordinator(ctx.user?.role || "")) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas coordenadores podem listar usuarios" });
-      }
+    list: protectedProcedure.query(async () => {
       return db.getAllUsers();
     }),
     

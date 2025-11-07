@@ -373,3 +373,14 @@
 - [ ] Salvar checkpoint com a modificação
 
 
+
+
+
+## Erro 403 ao Acessar Página de Usuários - Sessão Atual
+
+- [x] Investigar erro 403 ao acessar página de Usuários
+- [x] Identificar que o erro era causado por verificação de permissão muito restritiva
+- [x] Modificar procedimento users.list para permitir acesso a qualquer usuário autenticado
+- [x] Manter restrições de criação, edição e deleção apenas para coordenadores
+- [x] Testar e validar que a página de Usuários agora carrega corretamente
+
