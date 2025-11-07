@@ -41,8 +41,6 @@ function Router() {
             <Route path={"/capacidade-projeto"} component={ProjectCapacity} />
             <Route path={"/historico-alocacoes"} component={AllocationHistory} />
             <Route path={"/usuarios"} component={Users} />
-            <Route path={"/404"} component={NotFound} />
-            <Route component={NotFound} />
           </DashboardLayout>
         </>
       ) : (

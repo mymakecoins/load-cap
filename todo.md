@@ -384,3 +384,13 @@
 - [x] Manter restrições de criação, edição e deleção apenas para coordenadores
 - [x] Testar e validar que a página de Usuários agora carrega corretamente
 
+
+
+
+## Bug: Erro 404 na Parte Inferior das Páginas - Sessão Atual
+
+- [x] Investigar a causa do erro 404 que aparece na parte inferior de todas as páginas
+- [x] Identificar o componente ou código responsável
+- [x] Implementar a correção
+- [x] Testar e validar que o erro 404 não aparece mais
+
