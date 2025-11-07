@@ -183,9 +183,9 @@ export default function Dashboard() {
               <Skeleton className="h-64 w-full" />
             ) : projectData.length > 0 ? (
               <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={projectData}>
+                <BarChart data={projectData} margin={{ bottom: 100 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
+                  <XAxis dataKey="name" angle={-90} textAnchor="end" height={100} />
                   <YAxis />
                   <Tooltip />
                   <Bar dataKey="hours" fill="#3b82f6" />
