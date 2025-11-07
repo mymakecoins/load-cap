@@ -425,3 +425,12 @@
 
 - [x] Atualizar constante APP_LOGO com a nova URL da imagem
 
+
+
+
+## Bug: Erro de Compatibilidade react-quill com React 19
+
+- [x] Corrigir erro "Accessing non-instantiated editor" no RichTextEditor
+- [x] Corrigir erro "findDOMNode is not a function" no react-quill
+- [x] Substituir react-quill por implementação customizada usando Quill diretamente
+
