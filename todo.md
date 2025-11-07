@@ -411,3 +411,10 @@
 - [ ] Testar filtro de projetos por role (gerente vs admin/coordenador)
 - [ ] Validar todas as regras de negócio
 
+
+
+
+## Reordenação do Menu - Sessão Atual
+
+- [x] Mover item "Diário de Bordo" para logo abaixo de "Projetos" no menu de navegação
+

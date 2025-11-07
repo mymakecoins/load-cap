@@ -32,12 +32,12 @@ const menuItems = [
   { icon: Briefcase, label: "Clientes", path: "/clientes" },
   { icon: Users, label: "Colaboradores", path: "/colaboradores" },
   { icon: BarChart3, label: "Projetos", path: "/projetos" },
+  { icon: BookOpen, label: "Diário de Bordo", path: "/diario-bordo" },
   { icon: UserCheck, label: "Alocacoes", path: "/alocacoes" },
   { icon: TrendingUp, label: "Alocacao Dev", path: "/alocacao-desenvolvedor" },
   { icon: BarChart3, label: "Capacidade", path: "/capacidade-projeto" },
   { icon: BarChart3, label: "Historico", path: "/historico-alocacoes" },
   { icon: Users, label: "Usuarios", path: "/usuarios" },
-  { icon: BookOpen, label: "Diário de Bordo", path: "/diario-bordo" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
