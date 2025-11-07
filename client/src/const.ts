@@ -2,7 +2,7 @@ export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 
 export const APP_TITLE = "GTeam";
 
-export const APP_LOGO = "/logo.jpeg";
+export const APP_LOGO = "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031253160/HALoSPscqjCVDYJp.png";
 
 // Generate login URL at runtime so redirect URI reflects the current origin.
 export const getLoginUrl = () => {

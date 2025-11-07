@@ -418,3 +418,10 @@
 
 - [x] Mover item "Diário de Bordo" para logo abaixo de "Projetos" no menu de navegação
 
+
+
+
+## Atualização da Logo - Sessão Atual
+
+- [x] Atualizar constante APP_LOGO com a nova URL da imagem
+
