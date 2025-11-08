@@ -434,3 +434,13 @@
 - [x] Corrigir erro "findDOMNode is not a function" no react-quill
 - [x] Substituir react-quill por implementação customizada usando Quill diretamente
 
+
+
+
+## Refatoração: Mover Nova Entrada para Página Separada
+
+- [x] Criar página NewDiaryEntry com formulário
+- [x] Remover modal de ProjectDiaryView
+- [x] Adicionar navegação para /diario-bordo/:projectId/nova
+- [x] Implementar redirecionamento após salvar
+

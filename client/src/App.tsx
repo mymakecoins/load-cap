@@ -19,6 +19,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProjectDiary from "./pages/ProjectDiary";
 import ProjectDiaryView from "./pages/ProjectDiaryView";
+import NewDiaryEntry from "./pages/NewDiaryEntry";
 import { useAuth } from "./_core/hooks/useAuth";
 
 function Router() {
@@ -44,6 +45,7 @@ function Router() {
             <Route path={"/historico-alocacoes"} component={AllocationHistory} />
             <Route path={"/usuarios"} component={Users} />
             <Route path={"/diario-bordo"} component={ProjectDiary} />
+            <Route path={"/diario-bordo/:projectId/nova"} component={NewDiaryEntry} />
             <Route path={"/diario-bordo/:id"} component={ProjectDiaryView} />
           </DashboardLayout>
         </>
