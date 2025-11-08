@@ -1,5 +1,10 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal, customType } from "drizzle-orm/mysql-core";
 import { relations } from "drizzle-orm";
+
+// Custom type for MEDIUMTEXT to support larger content (up to 16MB)
+const mediumText = customType<{ data: string; driverData: string }>({
+  dataType: () => "mediumtext",
+});
 
 /**
  * Core user table backing auth flow.
@@ -12,7 +17,7 @@ export const users = mysqlTable("users", {
    * Use this for relations between tables.
    */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
+  /** User identifier (openId). For local authentication, uses format "local_{timestamp}_{random}". Unique per user. */
   openId: varchar("openId", { length: 64 }).unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }).unique(),
@@ -131,7 +136,7 @@ export const projectLogEntries = mysqlTable("project_log_entries", {
   projectId: int("projectId").notNull(),
   userId: int("userId").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
-  content: text("content").notNull(),
+  content: mediumText("content").notNull(), // Changed from text to mediumText to support images (up to 16MB)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

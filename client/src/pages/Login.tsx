@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -7,29 +7,53 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { APP_LOGO, APP_TITLE } from "@/const";
 import { Mail, Lock, Loader2 } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const utils = trpc.useUtils();
 
-  const loginMutation = trpc.auth.login.useMutation();
+  // Redirecionar para o dashboard se já estiver autenticado
+  useEffect(() => {
+    if (isAuthenticated) {
+      setLocation("/");
+    }
+  }, [isAuthenticated, setLocation]);
+
+  const loginMutation = trpc.auth.login.useMutation({
+    onSuccess: async (data) => {
+      if (data.success) {
+        toast.success("Login realizado com sucesso!");
+        
+        // Invalidar cache para forçar atualização
+        utils.auth.me.invalidate();
+        
+        // Aguardar um momento para garantir que o cookie foi definido
+        await new Promise(resolve => setTimeout(resolve, 150));
+        
+        // Fazer refetch para atualizar o estado de autenticação
+        await utils.auth.me.refetch();
+        
+        // Redirecionar para o dashboard
+        // Usar window.location para garantir reload completo e atualização do Router
+        window.location.href = "/";
+      }
+    },
+  });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const result = await loginMutation.mutateAsync({
+      await loginMutation.mutateAsync({
         email,
         password,
       });
-
-      if (result.success) {
-        toast.success("Login realizado com sucesso!");
-        setLocation("/");
-      }
     } catch (error: any) {
       console.error("Login error:", error);
       const errorMessage = error?.data?.message || error?.message || "Erro ao fazer login";
@@ -103,16 +127,6 @@ export default function Login() {
               )}
             </Button>
           </form>
-
-          <div className="mt-6 text-center text-sm">
-            <span className="text-gray-600">Não tem uma conta? </span>
-            <button
-              onClick={() => setLocation("/register")}
-              className="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Crie uma agora
-            </button>
-          </div>
         </CardContent>
       </Card>
     </div>

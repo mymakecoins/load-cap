@@ -441,12 +441,100 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN", message: "Apenas gerentes, coordenadores e administradores podem criar entradas no diário" });
         }
         
-        return db.createProjectLogEntry({
-          projectId: input.projectId,
-          userId: ctx.user!.id,
-          title: input.title,
-          content: input.content,
-        });
+        try {
+          return await db.createProjectLogEntry({
+            projectId: input.projectId,
+            userId: ctx.user!.id,
+            title: input.title,
+            content: input.content,
+          });
+        } catch (error: any) {
+          console.error("[ProjectLog] Error creating entry:", error);
+          console.error("[ProjectLog] Error details:", {
+            message: error.message,
+            code: error.code,
+            sqlState: error.sqlState,
+            sqlMessage: error.sqlMessage,
+          });
+          
+          // Verificar se é erro de tamanho do campo
+          if (error.code === "ER_DATA_TOO_LONG" || error.sqlState === "22001") {
+            throw new TRPCError({ 
+              code: "PAYLOAD_TOO_LARGE", 
+              message: "O conteúdo da entrada é muito grande. Tente reduzir o tamanho das imagens ou remover algumas imagens." 
+            });
+          }
+          
+          // Retornar mensagem de erro mais detalhada
+          const errorMessage = error.sqlMessage || error.message || "Erro ao criar entrada";
+          throw new TRPCError({ 
+            code: "INTERNAL_SERVER_ERROR", 
+            message: `Erro ao criar entrada: ${errorMessage}` 
+          });
+        }
+      }),
+    
+    // Get a single log entry by ID
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const entry = await db.getProjectLogEntryById(input.id);
+        if (!entry) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Entrada não encontrada" });
+        }
+        return entry;
+      }),
+    
+    // Update a log entry (only by creator)
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().min(1, "Título é obrigatório"),
+        content: z.string().min(1, "Conteúdo é obrigatório"),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário não autenticado" });
+        }
+        
+        try {
+          return await db.updateProjectLogEntry(
+            input.id,
+            { title: input.title, content: input.content },
+            ctx.user.id
+          );
+        } catch (error: any) {
+          console.error("[ProjectLog] Error updating entry:", error);
+          console.error("[ProjectLog] Error details:", {
+            message: error.message,
+            code: error.code,
+            sqlState: error.sqlState,
+            sqlMessage: error.sqlMessage,
+            stack: error.stack,
+          });
+          
+          if (error.message === "Apenas o criador pode editar esta entrada") {
+            throw new TRPCError({ code: "FORBIDDEN", message: error.message });
+          }
+          if (error.message === "Entrada não encontrada") {
+            throw new TRPCError({ code: "NOT_FOUND", message: error.message });
+          }
+          
+          // Verificar se é erro de tamanho do campo
+          if (error.code === "ER_DATA_TOO_LONG" || error.sqlState === "22001") {
+            throw new TRPCError({ 
+              code: "PAYLOAD_TOO_LARGE", 
+              message: "O conteúdo da entrada é muito grande. Tente reduzir o tamanho das imagens ou remover algumas imagens." 
+            });
+          }
+          
+          // Retornar mensagem de erro mais detalhada
+          const errorMessage = error.sqlMessage || error.message || "Erro ao atualizar entrada";
+          throw new TRPCError({ 
+            code: "INTERNAL_SERVER_ERROR", 
+            message: `Erro ao atualizar entrada: ${errorMessage}` 
+          });
+        }
       }),
   }),
 });

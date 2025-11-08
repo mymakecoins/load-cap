@@ -1,0 +1,1 @@
+ALTER TABLE `project_log_entries` MODIFY COLUMN `content` mediumtext NOT NULL;

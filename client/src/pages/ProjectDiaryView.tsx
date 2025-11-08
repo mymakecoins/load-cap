@@ -2,12 +2,14 @@ import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Loader2, Plus, ArrowLeft, Calendar, User } from "lucide-react";
+import { Loader2, Plus, ArrowLeft, Calendar, User, Edit } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function ProjectDiaryView() {
   const [, params] = useRoute("/diario-bordo/:id");
   const [, setLocation] = useLocation();
   const projectId = params?.id ? parseInt(params.id) : 0;
+  const { user } = useAuth();
 
   const { data: entries, isLoading } = trpc.projectLog.getByProject.useQuery(
     { projectId },
@@ -19,6 +21,10 @@ export default function ProjectDiaryView() {
 
   const handleNewEntry = () => {
     setLocation(`/diario-bordo/${projectId}/nova`);
+  };
+
+  const handleEditEntry = (entryId: number) => {
+    setLocation(`/diario-bordo/editar/${entryId}`);
   };
 
   if (isLoading) {
@@ -90,10 +96,26 @@ export default function ProjectDiaryView() {
                 </div>
               </AccordionTrigger>
               <AccordionContent className="pt-4 pb-6">
-                <div
-                  className="prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: entry.content }}
-                />
+                <div className="flex items-start justify-between gap-4">
+                  <div
+                    className="prose prose-sm max-w-none flex-1"
+                    dangerouslySetInnerHTML={{ __html: entry.content }}
+                  />
+                  {user && entry.userId === user.id && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditEntry(entry.id);
+                      }}
+                      className="shrink-0"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                  )}
+                </div>
               </AccordionContent>
             </AccordionItem>
           ))}

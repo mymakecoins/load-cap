@@ -50,6 +50,13 @@
       "when": 1762516115271,
       "tag": "0006_ancient_living_mummy",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1762643879462,
+      "tag": "0007_cute_sunset_bain",
+      "breakpoints": true
     }
   ]
 }

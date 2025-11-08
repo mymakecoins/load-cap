@@ -10,7 +10,10 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-    "db:push": "drizzle-kit generate && drizzle-kit migrate"
+    "db:push": "node scripts/drizzle-with-env.mjs generate && node scripts/drizzle-with-env.mjs migrate",
+    "db:seed": "node seed-database.mjs",
+    "db:seed:clear": "node seed-database.mjs --clear"
+
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
@@ -51,7 +54,6 @@
     "cmdk": "^1.1.1",
     "cookie": "^1.0.2",
     "date-fns": "^4.1.0",
-    "dotenv": "^17.2.2",
     "drizzle-orm": "^0.44.5",
     "embla-carousel-react": "^8.6.0",
     "express": "^4.21.2",
@@ -88,6 +90,7 @@
     "@vitejs/plugin-react": "^5.0.4",
     "add": "^2.0.6",
     "autoprefixer": "^10.4.20",
+    "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.0",
     "pnpm": "^10.15.1",

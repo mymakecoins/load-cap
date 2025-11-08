@@ -8,11 +8,19 @@ let _db: ReturnType<typeof drizzle> | null = null;
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  if (!_db) {
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      console.warn("[Database] DATABASE_URL not found in environment variables");
+      return null;
+    }
+    
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      console.log("[Database] Connecting to database...");
+      _db = drizzle(databaseUrl);
+      console.log("[Database] Connected successfully");
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.error("[Database] Failed to connect:", error);
       _db = null;
     }
   }
@@ -316,9 +324,39 @@ export async function getUserById(id: number) {
 
 export async function getUserByEmail(email: string) {
   const db = await getDb();
-  if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
+    return undefined;
+  }
+  
+  // Limpar e normalizar email
+  const cleanEmail = email.trim();
+  
+  try {
+    // Buscar por email exato
+    const result = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
+    
+    if (result.length === 0) {
+      console.log("[Database] User not found with email:", cleanEmail);
+      // Tentar buscar todos os usuários para debug
+      const allUsers = await db.select({ email: users.email }).from(users).limit(5);
+      console.log("[Database] Sample emails in DB:", allUsers.map(u => u.email));
+      return undefined;
+    }
+    
+    const user = result[0];
+    console.log("[Database] User found:", { 
+      id: user.id, 
+      email: user.email, 
+      emailMatch: user.email === cleanEmail,
+      hasPasswordHash: !!user.passwordHash,
+      passwordHashLength: user.passwordHash?.length || 0
+    });
+    return user;
+  } catch (error) {
+    console.error("[Database] Error getting user by email:", error);
+    return undefined;
+  }
 }
 
 export async function createLocalUser(data: {
@@ -359,8 +397,24 @@ export async function updateUserPassword(id: number, newPassword: string) {
 }
 
 export async function verifyPassword(passwordHash: string, plainPassword: string): Promise<boolean> {
+  if (!passwordHash || !plainPassword) {
+    console.log("[Database] verifyPassword: missing passwordHash or plainPassword");
+    return false;
+  }
+  
   const hash = createHash('sha256').update(plainPassword).digest('hex');
-  return hash === passwordHash;
+  const isValid = hash === passwordHash;
+  
+  if (!isValid) {
+    console.log("[Database] verifyPassword failed:", {
+      passwordHashLength: passwordHash.length,
+      plainPasswordLength: plainPassword.length,
+      calculatedHashPrefix: hash.substring(0, 20),
+      storedHashPrefix: passwordHash.substring(0, 20),
+    });
+  }
+  
+  return isValid;
 }
 
 
@@ -399,8 +453,102 @@ export async function createProjectLogEntry(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(projectLogEntries).values(data);
-  return result;
+  // Log do tamanho do conteúdo para debug
+  const contentLength = data.content.length;
+  console.log(`[Database] Creating project log entry: content length = ${contentLength} characters`);
+  
+  try {
+    const result = await db.insert(projectLogEntries).values(data);
+    console.log(`[Database] Successfully created project log entry`);
+    return result;
+  } catch (error: any) {
+    console.error(`[Database] Error creating project log entry:`, error);
+    console.error(`[Database] Error message:`, error.message);
+    console.error(`[Database] Error code:`, error.code);
+    console.error(`[Database] Error sqlState:`, error.sqlState);
+    console.error(`[Database] Error sqlMessage:`, error.sqlMessage);
+    throw error;
+  }
+}
+
+export async function getProjectLogEntryById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db
+    .select({
+      id: projectLogEntries.id,
+      projectId: projectLogEntries.projectId,
+      userId: projectLogEntries.userId,
+      title: projectLogEntries.title,
+      content: projectLogEntries.content,
+      createdAt: projectLogEntries.createdAt,
+      updatedAt: projectLogEntries.updatedAt,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(projectLogEntries)
+    .leftJoin(users, eq(projectLogEntries.userId, users.id))
+    .where(eq(projectLogEntries.id, id))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateProjectLogEntry(
+  id: number,
+  data: { title: string; content: string },
+  userId: number
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Verificar se a entrada existe e se o usuário é o criador
+  const entry = await db
+    .select()
+    .from(projectLogEntries)
+    .where(eq(projectLogEntries.id, id))
+    .limit(1);
+  
+  if (entry.length === 0) {
+    throw new Error("Entrada não encontrada");
+  }
+  
+  if (entry[0].userId !== userId) {
+    throw new Error("Apenas o criador pode editar esta entrada");
+  }
+  
+  // Log do tamanho do conteúdo para debug
+  const contentLength = data.content.length;
+  console.log(`[Database] Updating project log entry ${id}: content length = ${contentLength} characters`);
+  
+  // Verificar se o conteúdo é muito grande (TEXT pode armazenar até 65.535 bytes)
+  // Considerando que caracteres podem ser multi-byte, usar um limite conservador
+  if (contentLength > 60000) {
+    console.warn(`[Database] Content size (${contentLength}) may exceed TEXT field limit`);
+  }
+  
+  try {
+    // Atualizar a entrada
+    await db
+      .update(projectLogEntries)
+      .set({
+        title: data.title,
+        content: data.content,
+        updatedAt: new Date(),
+      })
+      .where(eq(projectLogEntries.id, id));
+    
+    console.log(`[Database] Successfully updated project log entry ${id}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error(`[Database] Error updating project log entry ${id}:`, error);
+    console.error(`[Database] Error message:`, error.message);
+    console.error(`[Database] Error code:`, error.code);
+    console.error(`[Database] Error sqlState:`, error.sqlState);
+    console.error(`[Database] Error sqlMessage:`, error.sqlMessage);
+    throw error;
+  }
 }
 
 export async function getProjectsByManagerId(managerId: number) {

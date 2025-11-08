@@ -29,15 +29,28 @@
 }
 
 .rich-text-editor .ql-stroke {
-  stroke: hsl(var(--foreground));
+  stroke: #000000;
 }
 
 .rich-text-editor .ql-fill {
-  fill: hsl(var(--foreground));
+  fill: #000000;
 }
 
 .rich-text-editor .ql-picker-label {
-  color: hsl(var(--foreground));
+  color: #000000;
+}
+
+/* Cor dos botões quando hover */
+.rich-text-editor .ql-toolbar .ql-formats button:hover .ql-stroke,
+.rich-text-editor .ql-toolbar .ql-formats button:focus .ql-stroke,
+.rich-text-editor .ql-toolbar .ql-formats button.ql-active .ql-stroke {
+  stroke: #000000;
+}
+
+.rich-text-editor .ql-toolbar .ql-formats button:hover .ql-fill,
+.rich-text-editor .ql-toolbar .ql-formats button:focus .ql-fill,
+.rich-text-editor .ql-toolbar .ql-formats button.ql-active .ql-fill {
+  fill: #000000;
 }
 
 .rich-text-editor .ql-picker-options {

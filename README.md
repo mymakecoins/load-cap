@@ -17,18 +17,19 @@ Uma aplicação web completa para gerenciar times, projetos e alocações de col
 - **Histórico de Alocações**: Rastreamento completo de mudanças com filtros e gráficos temporais
 
 ### Controle de Acesso
-- **Autenticação OAuth**: Integração com Manus OAuth
+- **Autenticação Local**: Login com email e senha
 - **RBAC (Role-Based Access Control)**:
+  - **Admin**: Acesso completo a todos os cadastros
   - **Coordenador**: Acesso completo a todos os cadastros
   - **Gerente de Projeto**: Pode editar apenas projetos alocados
-  - **Usuário**: Acesso apenas de visualização
+  - **Developer**: Acesso apenas de visualização
 
 ## 🚀 Tecnologias
 
 - **Frontend**: React 19, Tailwind CSS 4, shadcn/ui, Recharts
 - **Backend**: Express 4, tRPC 11, Node.js
 - **Banco de Dados**: MySQL/TiDB com Drizzle ORM
-- **Autenticação**: Manus OAuth
+- **Autenticação**: Local (email/senha)
 - **Build**: Vite, TypeScript
 
 ## 📦 Instalação
@@ -52,33 +53,45 @@ pnpm install
 ```
 
 3. **Configure variáveis de ambiente**
-```bash
-cp .env.example .env.local
+
+Crie um arquivo `.env.local` na raiz do projeto com as seguintes variáveis:
+
+```env
+DATABASE_URL=mysql://root:root@localhost:3306/team_management
+JWT_SECRET=your-secret-key-change-in-production
+VITE_APP_TITLE=Sistema de Gestão de Times
+VITE_APP_LOGO=/logo.jpeg
 ```
 
-Variáveis necessárias:
-- `DATABASE_URL`: Connection string do banco de dados
-- `JWT_SECRET`: Chave secreta para sessões
-- `VITE_APP_ID`: ID da aplicação OAuth
-- `OAUTH_SERVER_URL`: URL do servidor OAuth
-- `VITE_OAUTH_PORTAL_URL`: URL do portal OAuth
+> **📖 Para mais detalhes sobre configuração**, consulte [SETUP_LOCAL.md](./SETUP_LOCAL.md)
 
 4. **Execute as migrações do banco de dados**
 ```bash
 pnpm db:push
 ```
 
-5. **Inicie o servidor de desenvolvimento**
+5. **Popule o banco de dados com dados de exemplo (opcional)**
+```bash
+# Primeira vez - limpa e insere dados
+pnpm db:seed:clear
+
+# Ou apenas insere/atualiza dados
+pnpm db:seed
+```
+
+6. **Inicie o servidor de desenvolvimento**
 ```bash
 pnpm dev
 ```
 
 A aplicação estará disponível em `http://localhost:3000`
 
+> **📖 Para mais detalhes sobre configuração local**, consulte [SETUP_LOCAL.md](./SETUP_LOCAL.md)
+
 ## 📊 Estrutura do Banco de Dados
 
 ### Tabelas Principais
-- **users**: Usuários do sistema com autenticação OAuth
+- **users**: Usuários do sistema com autenticação local (email/senha)
 - **clients**: Clientes da fábrica
 - **employees**: Colaboradores com tipos de especialidade
 - **projects**: Projetos com tipos e gerentes alocados
@@ -87,13 +100,17 @@ A aplicação estará disponível em `http://localhost:3000`
 
 ## 🔐 Autenticação
 
-O sistema utiliza OAuth para autenticação. Após o login, o usuário recebe um token JWT que é armazenado em cookie seguro.
+O sistema utiliza autenticação local com email e senha. Após o login, o usuário recebe um cookie de sessão seguro.
+
+### Login
+- Os usuários fazem login com email e senha
+- Apenas administradores podem criar novos usuários através da interface de gerenciamento
 
 ### Papéis de Usuário
 - **admin**: Acesso completo (geralmente o dono da aplicação)
 - **coordinator**: Pode gerenciar todos os cadastros
 - **manager**: Pode editar projetos alocados
-- **user**: Acesso apenas de visualização
+- **developer**: Acesso apenas de visualização
 
 ## 📈 Uso
 

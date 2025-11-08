@@ -14,9 +14,9 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
 
-  // Don't redirect if we're on login or register pages
+  // Don't redirect if we're on login page
   const currentPath = window.location.pathname;
-  if (currentPath === '/login' || currentPath === '/register') return;
+  if (currentPath === '/login') return;
 
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
 
