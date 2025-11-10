@@ -23,13 +23,21 @@ export default function Dashboard() {
   const { data: allocations, isLoading: allocLoading } = trpc.allocations.list.useQuery();
   const { data: employees, isLoading: empLoading } = trpc.employees.list.useQuery();
   const { data: projects, isLoading: projLoading } = trpc.projects.list.useQuery();
+  const { data: allocationMode } = trpc.settings.getAllocationMode.useQuery();
 
   const isLoading = allocLoading || empLoading || projLoading;
 
-  // Calcular estatísticas
+  // Calcular estatísticas baseado no modo configurado
   const totalCapacity = employees?.reduce((sum, emp) => sum + emp.monthlyCapacityHours, 0) || 0;
-  const totalAllocated = allocations?.reduce((sum, alloc) => sum + alloc.allocatedHours, 0) || 0;
-  const utilizationRate = totalCapacity > 0 ? ((totalAllocated / totalCapacity) * 100).toFixed(1) : 0;
+  const totalAllocated = allocationMode === "percentage"
+    ? allocations?.reduce((sum, alloc) => {
+        const percentage = alloc.allocatedPercentage ? parseFloat(String(alloc.allocatedPercentage)) : 0;
+        return sum + percentage;
+      }, 0) || 0
+    : allocations?.reduce((sum, alloc) => sum + alloc.allocatedHours, 0) || 0;
+  const utilizationRate = allocationMode === "percentage"
+    ? totalAllocated.toFixed(1) // Já é percentual
+    : totalCapacity > 0 ? ((totalAllocated / totalCapacity) * 100).toFixed(1) : 0;
 
   // Distribuição por tipo de profissional
   const employeesByType = employees?.reduce((acc: Record<string, number>, emp) => {
@@ -57,9 +65,12 @@ export default function Dashboard() {
     };
   });
 
-  // Distribuição por projeto
+  // Distribuição por projeto baseado no modo configurado
   const allocationByProject = allocations?.reduce((acc: Record<number, number>, alloc) => {
-    acc[alloc.projectId] = (acc[alloc.projectId] || 0) + alloc.allocatedHours;
+    const value = allocationMode === "percentage"
+      ? (alloc.allocatedPercentage ? parseFloat(String(alloc.allocatedPercentage)) : 0)
+      : alloc.allocatedHours;
+    acc[alloc.projectId] = (acc[alloc.projectId] || 0) + value;
     return acc;
   }, {}) || {};
 
@@ -99,9 +110,15 @@ export default function Dashboard() {
             {isLoading ? (
               <Skeleton className="h-8 w-20" />
             ) : (
-              <div className="text-2xl font-bold">{totalAllocated} h</div>
+              <div className="text-2xl font-bold">
+                {allocationMode === "percentage"
+                  ? `${totalAllocated.toFixed(1)}%`
+                  : `${totalAllocated} h`}
+              </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">horas/mês</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {allocationMode === "percentage" ? "percentual" : "horas/mês"}
+            </p>
           </CardContent>
         </Card>
 
@@ -176,7 +193,11 @@ export default function Dashboard() {
         <Card className="md:col-span-3">
           <CardHeader>
             <CardTitle>Alocação por Projeto</CardTitle>
-            <CardDescription>Horas alocadas em cada projeto</CardDescription>
+            <CardDescription>
+              {allocationMode === "percentage" 
+                ? "Percentual alocado em cada projeto" 
+                : "Horas alocadas em cada projeto"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (

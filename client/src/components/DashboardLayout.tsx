@@ -21,24 +21,33 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Briefcase, UserCheck, BarChart3, TrendingUp, BookOpen } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Briefcase, UserCheck, BarChart3, TrendingUp, BookOpen, Settings } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Briefcase, label: "Clientes", path: "/clientes" },
-  { icon: Users, label: "Colaboradores", path: "/colaboradores" },
-  { icon: BarChart3, label: "Projetos", path: "/projetos" },
-  { icon: BookOpen, label: "Diário de Bordo", path: "/diario-bordo" },
-  { icon: UserCheck, label: "Alocacoes", path: "/alocacoes" },
-  { icon: TrendingUp, label: "Alocacao Dev", path: "/alocacao-desenvolvedor" },
-  { icon: BarChart3, label: "Capacidade", path: "/capacidade-projeto" },
-  { icon: BarChart3, label: "Historico", path: "/historico-alocacoes" },
-  { icon: Users, label: "Usuarios", path: "/usuarios" },
-];
+const getMenuItems = (userRole?: string) => {
+  const items = [
+    { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+    { icon: Briefcase, label: "Clientes", path: "/clientes" },
+    { icon: Users, label: "Colaboradores", path: "/colaboradores" },
+    { icon: BarChart3, label: "Projetos", path: "/projetos" },
+    { icon: BookOpen, label: "Diário de Bordo", path: "/diario-bordo" },
+    { icon: UserCheck, label: "Alocacoes", path: "/alocacoes" },
+    { icon: TrendingUp, label: "Alocação por Colaborador", path: "/alocacao-desenvolvedor" },
+    { icon: BarChart3, label: "Alocação por Projeto", path: "/capacidade-projeto" },
+    { icon: BarChart3, label: "Historico", path: "/historico-alocacoes" },
+    { icon: Users, label: "Usuarios", path: "/usuarios" },
+  ];
+  
+  // Adicionar Configurações apenas para admin
+  if (userRole === "admin") {
+    items.push({ icon: Settings, label: "Configurações", path: "/configuracoes" });
+  }
+  
+  return items;
+};
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
@@ -129,6 +138,7 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const menuItems = getMenuItems(user?.role);
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 

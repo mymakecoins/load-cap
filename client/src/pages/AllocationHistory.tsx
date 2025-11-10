@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
@@ -42,39 +43,81 @@ export default function AllocationHistory() {
 
   const { data: employees } = trpc.employees.list.useQuery();
   const { data: projects } = trpc.projects.list.useQuery();
-  const { data: history, isLoading } = trpc.allocations.getHistory.useQuery();
+  
+  // Buscar histórico do colaborador selecionado (sem filtro de projeto) para obter lista de projetos disponíveis
+  const { data: employeeHistory } = trpc.allocations.getHistory.useQuery(
+    filterEmployeeId ? { employeeId: filterEmployeeId } : undefined,
+    { enabled: !!filterEmployeeId } // Só busca se tiver colaborador selecionado
+  );
+  
+  // Passar filtros para a query do histórico principal
+  const { data: history, isLoading } = trpc.allocations.getHistory.useQuery({
+    employeeId: filterEmployeeId || undefined,
+    projectId: filterProjectId || undefined,
+  });
+  const { data: allocationMode } = trpc.settings.getAllocationMode.useQuery();
 
-  // Filtrar histórico
+  // Limpar projeto quando colaborador mudar
+  useEffect(() => {
+    if (!filterEmployeeId && filterProjectId) {
+      setFilterProjectId(null);
+    }
+  }, [filterEmployeeId, filterProjectId]);
+  
+  // Filtrar histórico (agora apenas por período, pois employeeId e projectId já vêm filtrados do backend)
   let filteredHistory = history || [];
   
-  if (filterEmployeeId) {
-    filteredHistory = filteredHistory.filter((h: any) => h.employeeId === filterEmployeeId);
-  }
+  // Filtrar projetos disponíveis baseado no colaborador selecionado
+  const availableProjects = filterEmployeeId && employeeHistory
+    ? employeeHistory
+        .map((h: any) => h.projectId)
+        .filter((id: number, index: number, self: number[]) => self.indexOf(id) === index) // Remover duplicatas
+        .map((projectId: number) => projects?.find((p) => p.id === projectId))
+        .filter((p): p is NonNullable<typeof p> => p !== undefined)
+        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+    : projects || [];
   
-  if (filterProjectId) {
-    filteredHistory = filteredHistory.filter((h: any) => h.projectId === filterProjectId);
-  }
-  
-  if (startDate) {
-    const start = new Date(startDate);
-    filteredHistory = filteredHistory.filter((h: any) => new Date(h.timestamp) >= start);
-  }
-  
-  if (endDate) {
-    const end = new Date(endDate);
-    filteredHistory = filteredHistory.filter((h: any) => new Date(h.timestamp) <= end);
+  // Filtrar por período da alocação (não pela data de criação do registro)
+  if (startDate || endDate) {
+    const filterStart = startDate ? new Date(startDate) : null;
+    if (filterStart) filterStart.setHours(0, 0, 0, 0);
+    
+    const filterEnd = endDate ? new Date(endDate) : null;
+    if (filterEnd) filterEnd.setHours(23, 59, 59, 999);
+    
+    filteredHistory = filteredHistory.filter((h: any) => {
+      const allocStart = new Date(h.startDate);
+      allocStart.setHours(0, 0, 0, 0);
+      
+      // Se a alocação não tem data fim, considerar como data máxima
+      const allocEnd = h.endDate ? new Date(h.endDate) : new Date('2099-12-31');
+      allocEnd.setHours(23, 59, 59, 999);
+      
+      // Verificar sobreposição: dois períodos se sobrepõem se:
+      // start1 <= end2 && start2 <= end1
+      const filterStartTime = filterStart ? filterStart.getTime() : 0;
+      const filterEndTime = filterEnd ? filterEnd.getTime() : Number.MAX_SAFE_INTEGER;
+      const allocStartTime = allocStart.getTime();
+      const allocEndTime = allocEnd.getTime();
+      
+      // Sobreposição ocorre se: allocStart <= filterEnd && filterStart <= allocEnd
+      return allocStartTime <= filterEndTime && filterStartTime <= allocEndTime;
+    });
   }
 
-  // Agrupar por data para gráfico
+  // Agrupar por data para gráfico baseado no modo configurado
   const historyByDate: Record<string, number> = {};
   filteredHistory.forEach((h: any) => {
-    const date = new Date(h.timestamp).toLocaleDateString('pt-BR');
-    historyByDate[date] = (historyByDate[date] || 0) + h.hoursChanged;
+    const date = new Date(h.createdAt).toLocaleDateString('pt-BR');
+    const value = allocationMode === "percentage"
+      ? (h.allocatedPercentage ? parseFloat(String(h.allocatedPercentage)) : 0)
+      : h.allocatedHours;
+    historyByDate[date] = (historyByDate[date] || 0) + value;
   });
 
-  const chartData = Object.entries(historyByDate).map(([date, hours]) => ({
+  const chartData = Object.entries(historyByDate).map(([date, value]) => ({
     date,
-    hours,
+    value,
   }));
 
   return (
@@ -94,40 +137,78 @@ export default function AllocationHistory() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="employee-filter">Colaborador</Label>
-              <Select 
-                value={filterEmployeeId?.toString() || ""} 
-                onValueChange={(value) => setFilterEmployeeId(value ? parseInt(value) : null)}
-              >
-                <SelectTrigger id="employee-filter">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees?.sort((a, b) => a.name.localeCompare(b.name)).map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id.toString()}>
-                      {emp.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select 
+                  value={filterEmployeeId?.toString() || undefined} 
+                  onValueChange={(value) => {
+                    const newEmployeeId = value ? parseInt(value) : null;
+                    setFilterEmployeeId(newEmployeeId);
+                    // Limpar projeto quando colaborador mudar
+                    if (!newEmployeeId) {
+                      setFilterProjectId(null);
+                    }
+                  }}
+                >
+                  <SelectTrigger id="employee-filter" className="flex-1">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees?.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id.toString()}>
+                        {emp.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {filterEmployeeId && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setFilterEmployeeId(null);
+                      setFilterProjectId(null);
+                    }}
+                    title="Limpar colaborador"
+                  >
+                    ×
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div>
               <Label htmlFor="project-filter">Projeto</Label>
-              <Select 
-                value={filterProjectId?.toString() || ""} 
-                onValueChange={(value) => setFilterProjectId(value ? parseInt(value) : null)}
-              >
-                <SelectTrigger id="project-filter">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects?.sort((a, b) => a.name.localeCompare(b.name)).map((proj) => (
-                    <SelectItem key={proj.id} value={proj.id.toString()}>
-                      {proj.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select 
+                  value={filterProjectId?.toString() || undefined} 
+                  onValueChange={(value) => setFilterProjectId(value ? parseInt(value) : null)}
+                  disabled={!filterEmployeeId}
+                >
+                  <SelectTrigger id="project-filter" className="flex-1">
+                    <SelectValue placeholder={filterEmployeeId ? "Todos" : "Selecione um colaborador primeiro"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableProjects.map((proj) => (
+                      <SelectItem key={proj.id} value={proj.id.toString()}>
+                        {proj.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {filterProjectId && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setFilterProjectId(null)}
+                    title="Limpar projeto"
+                    disabled={!filterEmployeeId}
+                  >
+                    ×
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div>
@@ -157,7 +238,11 @@ export default function AllocationHistory() {
       <Card>
         <CardHeader>
           <CardTitle>Mudanças ao Longo do Tempo</CardTitle>
-          <CardDescription>Horas de alocação alteradas por dia</CardDescription>
+          <CardDescription>
+            {allocationMode === "percentage" 
+              ? "Percentual de alocação alterado por dia" 
+              : "Horas de alocação alteradas por dia"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -170,7 +255,12 @@ export default function AllocationHistory() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="hours" stroke="#3b82f6" name="Horas Alteradas" />
+                <Line 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#3b82f6" 
+                  name={allocationMode === "percentage" ? "Percentual Alterado" : "Horas Alteradas"} 
+                />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -203,7 +293,7 @@ export default function AllocationHistory() {
                     <TableHead>Colaborador</TableHead>
                     <TableHead>Projeto</TableHead>
                     <TableHead>Tipo de Mudança</TableHead>
-                    <TableHead>Horas Alteradas</TableHead>
+                    <TableHead>{allocationMode === "percentage" ? "Percentual" : "Horas Alteradas"}</TableHead>
                     <TableHead>Observações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -212,7 +302,7 @@ export default function AllocationHistory() {
                     filteredHistory.map((record: any, idx: number) => (
                       <TableRow key={idx}>
                         <TableCell>
-                          {new Date(record.timestamp).toLocaleString('pt-BR')}
+                          {new Date(record.createdAt).toLocaleString('pt-BR')}
                         </TableCell>
                         <TableCell>
                           {employees?.find(e => e.id === record.employeeId)?.name || "-"}
@@ -221,13 +311,17 @@ export default function AllocationHistory() {
                           {projects?.find(p => p.id === record.projectId)?.name || "-"}
                         </TableCell>
                         <TableCell>
-                          {record.changeType === "allocation" && "Alocação"}
-                          {record.changeType === "update" && "Atualização"}
-                          {record.changeType === "removal" && "Remoção"}
+                          {record.action === "created" && "Criado"}
+                          {record.action === "updated" && "Atualizado"}
+                          {record.action === "deleted" && "Removido"}
                         </TableCell>
-                        <TableCell>{record.hoursChanged}h</TableCell>
+                        <TableCell>
+                          {allocationMode === "percentage"
+                            ? (record.allocatedPercentage ? `${parseFloat(String(record.allocatedPercentage)).toFixed(2)}%` : "-")
+                            : `${record.allocatedHours}h`}
+                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {record.notes || "-"}
+                          -
                         </TableCell>
                       </TableRow>
                     ))

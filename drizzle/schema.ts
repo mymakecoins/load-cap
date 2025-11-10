@@ -99,6 +99,7 @@ export const allocations = mysqlTable("allocations", {
   employeeId: int("employeeId").notNull(),
   projectId: int("projectId").notNull(),
   allocatedHours: int("allocatedHours").notNull(),
+  allocatedPercentage: decimal("allocatedPercentage", { precision: 5, scale: 2 }), // Percentual de alocação (0-100)
   startDate: timestamp("startDate").notNull(),
   endDate: timestamp("endDate"),
   isActive: boolean("isActive").default(true).notNull(),
@@ -118,6 +119,7 @@ export const allocationHistory = mysqlTable("allocation_history", {
   employeeId: int("employeeId").notNull(),
   projectId: int("projectId").notNull(),
   allocatedHours: int("allocatedHours").notNull(),
+  allocatedPercentage: decimal("allocatedPercentage", { precision: 5, scale: 2 }), // Percentual de alocação (0-100)
   startDate: timestamp("startDate").notNull(),
   endDate: timestamp("endDate"),
   action: mysqlEnum("action", ["created", "updated", "deleted"]).notNull(),
@@ -143,6 +145,22 @@ export const projectLogEntries = mysqlTable("project_log_entries", {
 
 export type ProjectLogEntry = typeof projectLogEntries.$inferSelect;
 export type InsertProjectLogEntry = typeof projectLogEntries.$inferInsert;
+
+/**
+ * System Settings table - stores system-wide configuration
+ */
+export const systemSettings = mysqlTable("system_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  value: text("value").notNull(),
+  description: text("description"),
+  updatedBy: int("updatedBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SystemSetting = typeof systemSettings.$inferSelect;
+export type InsertSystemSetting = typeof systemSettings.$inferInsert;
 
 /**
  * Relations

@@ -13,7 +13,8 @@
     "db:push": "node scripts/drizzle-with-env.mjs generate && node scripts/drizzle-with-env.mjs migrate",
     "db:seed": "node seed-database.mjs",
     "db:seed:clear": "node seed-database.mjs --clear",
-    "db:seed:allocations": "node seed-allocations-2weeks.mjs"
+    "db:seed:allocations": "node seed-allocations-2weeks.mjs",
+    "db:migrate:allocations": "node migrate-allocations-data.mjs"
 
   },
   "dependencies": {

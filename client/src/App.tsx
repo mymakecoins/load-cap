@@ -15,6 +15,7 @@ import EmployeeAllocations from "./pages/EmployeeAllocations";
 import ProjectCapacity from "./pages/ProjectCapacity";
 import AllocationHistory from "./pages/AllocationHistory";
 import Users from "./pages/Users";
+import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import ProjectDiary from "./pages/ProjectDiary";
 import ProjectDiaryView from "./pages/ProjectDiaryView";
@@ -43,6 +44,7 @@ function Router() {
             <Route path={"/capacidade-projeto"} component={ProjectCapacity} />
             <Route path={"/historico-alocacoes"} component={AllocationHistory} />
             <Route path={"/usuarios"} component={Users} />
+            <Route path={"/configuracoes"} component={Settings} />
             <Route path={"/diario-bordo"} component={ProjectDiary} />
             <Route path={"/diario-bordo/editar/:id"} component={EditDiaryEntry} />
             <Route path={"/diario-bordo/:projectId/nova"} component={NewDiaryEntry} />

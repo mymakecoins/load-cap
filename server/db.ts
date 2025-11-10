@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { eq, and, or, desc, ne, isNull, asc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, clients, employees, projects, allocations, allocationHistory, projectLogEntries, Client, Employee, Project, Allocation, AllocationHistory } from "../drizzle/schema";
+import { InsertUser, users, clients, employees, projects, allocations, allocationHistory, projectLogEntries, systemSettings, Client, Employee, Project, Allocation, AllocationHistory, SystemSetting } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -582,5 +582,67 @@ export async function getActiveProjects() {
     .orderBy(asc(projects.name));
   
   return result;
+}
+
+// ===== SYSTEM SETTINGS QUERIES =====
+export async function getSystemSetting(key: string): Promise<SystemSetting | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db
+    .select()
+    .from(systemSettings)
+    .where(eq(systemSettings.key, key))
+    .limit(1);
+  
+  return result[0];
+}
+
+export async function getAllSystemSettings(): Promise<SystemSetting[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select().from(systemSettings).orderBy(asc(systemSettings.key));
+}
+
+export async function setSystemSetting(
+  key: string,
+  value: string,
+  description: string | null,
+  updatedBy: number
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const existing = await getSystemSetting(key);
+  
+  if (existing) {
+    await db
+      .update(systemSettings)
+      .set({
+        value,
+        description: description || existing.description,
+        updatedBy,
+        updatedAt: new Date(),
+      })
+      .where(eq(systemSettings.key, key));
+  } else {
+    await db.insert(systemSettings).values({
+      key,
+      value,
+      description,
+      updatedBy,
+    });
+  }
+}
+
+// Helper para obter o modo de alocação configurado
+export async function getAllocationMode(): Promise<"hours" | "percentage"> {
+  const setting = await getSystemSetting("allocation_mode");
+  if (setting && (setting.value === "hours" || setting.value === "percentage")) {
+    return setting.value as "hours" | "percentage";
+  }
+  // Padrão: horas
+  return "hours";
 }
 

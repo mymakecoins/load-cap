@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -49,10 +49,24 @@ export default function EmployeeAllocations() {
   const [selectedEmployeeType, setSelectedEmployeeType] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const allocationDataRef = useRef<HTMLDivElement>(null);
 
   const { data: employees, isLoading: empLoading } = trpc.employees.list.useQuery();
   const { data: allocations, isLoading: allocLoading } = trpc.allocations.list.useQuery();
   const { data: projects } = trpc.projects.list.useQuery();
+  const { data: allocationMode } = trpc.settings.getAllocationMode.useQuery();
+
+  // Scroll automático quando um colaborador é selecionado
+  useEffect(() => {
+    if (selectedEmployeeId && allocationDataRef.current) {
+      setTimeout(() => {
+        allocationDataRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
+    }
+  }, [selectedEmployeeId]);
 
   // Filtrar colaboradores por tipo se selecionado
   let filteredEmployees = employees || [];
@@ -74,9 +88,17 @@ export default function EmployeeAllocations() {
       });
     }
     
-    const totalAllocated = empAllocations.reduce((sum, a) => sum + a.allocatedHours, 0);
+    // Calcular total alocado baseado no modo configurado
+    const totalAllocated = allocationMode === "percentage" 
+      ? empAllocations.reduce((sum, a) => {
+          const percentage = a.allocatedPercentage ? parseFloat(String(a.allocatedPercentage)) : 0;
+          return sum + percentage;
+        }, 0)
+      : empAllocations.reduce((sum, a) => sum + a.allocatedHours, 0);
     const monthlyCapacity = emp.monthlyCapacityHours || 0;
-    const utilizationRate = monthlyCapacity > 0 ? ((totalAllocated / monthlyCapacity) * 100) : 0;
+    const utilizationRate = allocationMode === "percentage"
+      ? totalAllocated // Já é percentual
+      : monthlyCapacity > 0 ? ((totalAllocated / monthlyCapacity) * 100) : 0;
     
     // Contar quantidade de projetos unicos
     const uniqueProjects = new Set(empAllocations.map(a => a.projectId)).size;
@@ -110,39 +132,56 @@ export default function EmployeeAllocations() {
     setEndDate(end.toISOString().split('T')[0]);
   };
 
-  // Calcular estatísticas do colaborador
-  const totalAllocated = employeeAllocations.reduce((sum, a) => sum + a.allocatedHours, 0);
+  // Calcular estatísticas do colaborador baseado no modo configurado
+  const totalAllocated = allocationMode === "percentage"
+    ? employeeAllocations.reduce((sum, a) => {
+        const percentage = a.allocatedPercentage ? parseFloat(String(a.allocatedPercentage)) : 0;
+        return sum + percentage;
+      }, 0)
+    : employeeAllocations.reduce((sum, a) => sum + a.allocatedHours, 0);
   const monthlyCapacity = selectedEmployee?.monthlyCapacityHours || 0;
-  const utilizationRate = monthlyCapacity > 0 ? ((totalAllocated / monthlyCapacity) * 100).toFixed(1) : 0;
-  const availableHours = monthlyCapacity - totalAllocated;
+  const utilizationRate = allocationMode === "percentage"
+    ? totalAllocated.toFixed(1) // Já é percentual
+    : monthlyCapacity > 0 ? ((totalAllocated / monthlyCapacity) * 100).toFixed(1) : 0;
+  const availableHours = allocationMode === "percentage"
+    ? (100 - totalAllocated).toFixed(1) // Percentual disponível
+    : monthlyCapacity - totalAllocated;
 
-  // Dados para gráfico de alocação
-  const allocationChartData = employeeAllocations.map(alloc => ({
-    name: projects?.find(p => p.id === alloc.projectId)?.name || `Projeto ${alloc.projectId}`,
-    hours: alloc.allocatedHours,
+  // Dados para gráfico de alocação - agrupar por projeto e somar valores
+  const allocationByProject: Record<number, number> = {};
+  employeeAllocations.forEach(alloc => {
+    const value = allocationMode === "percentage"
+      ? (alloc.allocatedPercentage ? parseFloat(String(alloc.allocatedPercentage)) : 0)
+      : alloc.allocatedHours;
+    allocationByProject[alloc.projectId] = (allocationByProject[alloc.projectId] || 0) + value;
+  });
+
+  const allocationChartData = Object.entries(allocationByProject).map(([projectId, totalValue]) => ({
+    name: projects?.find(p => p.id === parseInt(projectId))?.name || `Projeto ${projectId}`,
+    value: totalValue,
   }));
 
   // Dados para gráfico de capacidade
   const capacityData = [
-    { name: "Alocado", value: totalAllocated },
-    { name: "Disponível", value: Math.max(0, availableHours) },
+    { name: "Alocado", value: allocationMode === "percentage" ? totalAllocated : totalAllocated },
+    { name: "Disponível", value: Math.max(0, parseFloat(availableHours.toString())) },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Alocação por Desenvolvedor</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Alocação por Colaborador</h1>
         <p className="text-muted-foreground mt-2">Visualizar alocação individual de cada colaborador</p>
       </div>
 
-      {/* Filtros de Data */}
+      {/* Filtros */}
       <Card>
         <CardHeader>
-          <CardTitle>Filtros de Período</CardTitle>
-          <CardDescription>Selecione um período ou use os presets</CardDescription>
+          <CardTitle>Filtros</CardTitle>
+          <CardDescription>Filtre colaboradores por período e tipo</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium">Data Início</label>
               <input
@@ -161,6 +200,21 @@ export default function EmployeeAllocations() {
                 className="w-full px-3 py-2 border rounded-md"
               />
             </div>
+            <div>
+              <label className="text-sm font-medium">Tipo de Colaborador</label>
+              <Select value={selectedEmployeeType} onValueChange={setSelectedEmployeeType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os tipos" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EMPLOYEE_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => handlePresetWeek(0)}>
@@ -169,32 +223,10 @@ export default function EmployeeAllocations() {
             <Button variant="outline" size="sm" onClick={() => handlePresetWeek(1)}>
               Próxima Semana
             </Button>
-            <Button variant="outline" size="sm" onClick={() => { setStartDate(""); setEndDate(""); }}>
-              Limpar
+            <Button variant="outline" size="sm" onClick={() => { setStartDate(""); setEndDate(""); setSelectedEmployeeType(""); }}>
+              Limpar Filtros
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Filtro por Tipo de Colaborador */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtro por Tipo de Colaborador</CardTitle>
-          <CardDescription>Selecione um tipo para filtrar colaboradores</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Select value={selectedEmployeeType} onValueChange={setSelectedEmployeeType}>
-            <SelectTrigger>
-              <SelectValue placeholder="Todos os tipos" />
-            </SelectTrigger>
-            <SelectContent>
-              {EMPLOYEE_TYPES.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </CardContent>
       </Card>
 
@@ -284,7 +316,7 @@ export default function EmployeeAllocations() {
       </Card>
 
       {selectedEmployee && (
-        <>
+        <div ref={allocationDataRef}>
           {/* KPI Cards */}
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
@@ -302,8 +334,14 @@ export default function EmployeeAllocations() {
                 <CardTitle className="text-sm font-medium">Alocado</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalAllocated} h</div>
-                <p className="text-xs text-muted-foreground mt-1">horas/mês</p>
+                <div className="text-2xl font-bold">
+                  {allocationMode === "percentage" 
+                    ? `${totalAllocated.toFixed(1)}%` 
+                    : `${totalAllocated} h`}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {allocationMode === "percentage" ? "percentual" : "horas/mês"}
+                </p>
               </CardContent>
             </Card>
 
@@ -312,8 +350,14 @@ export default function EmployeeAllocations() {
                 <CardTitle className="text-sm font-medium">Disponível</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{availableHours} h</div>
-                <p className="text-xs text-muted-foreground mt-1">horas/mês</p>
+                <div className="text-2xl font-bold">
+                  {allocationMode === "percentage" 
+                    ? `${availableHours}%` 
+                    : `${availableHours} h`}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {allocationMode === "percentage" ? "percentual" : "horas/mês"}
+                </p>
               </CardContent>
             </Card>
 
@@ -333,19 +377,26 @@ export default function EmployeeAllocations() {
             <Card>
               <CardHeader>
                 <CardTitle>Alocação por Projeto</CardTitle>
-                <CardDescription>Horas alocadas em cada projeto</CardDescription>
+                <CardDescription>
+                  {allocationMode === "percentage" ? "Percentual alocado em cada projeto" : "Horas alocadas em cada projeto"}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {allocLoading ? (
                   <Skeleton className="h-64 w-full" />
                 ) : allocationChartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={allocationChartData}>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart data={allocationChartData} margin={{ bottom: 100 }}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
+                      <XAxis 
+                        dataKey="name" 
+                        angle={-90} 
+                        textAnchor="end" 
+                        height={100}
+                      />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="hours" fill="#3b82f6" />
+                      <Bar dataKey="value" fill="#3b82f6" />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -398,7 +449,7 @@ export default function EmployeeAllocations() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Projeto</TableHead>
-                        <TableHead>Horas Alocadas</TableHead>
+                        <TableHead>{allocationMode === "percentage" ? "Percentual" : "Horas Alocadas"}</TableHead>
                         <TableHead>Data de Início</TableHead>
                         <TableHead>Data de Fim</TableHead>
                       </TableRow>
@@ -410,7 +461,11 @@ export default function EmployeeAllocations() {
                             <TableCell className="font-medium">
                               {projects?.find(p => p.id === alloc.projectId)?.name || "-"}
                             </TableCell>
-                            <TableCell>{alloc.allocatedHours}h</TableCell>
+                            <TableCell>
+                              {allocationMode === "percentage"
+                                ? (alloc.allocatedPercentage ? `${parseFloat(String(alloc.allocatedPercentage)).toFixed(2)}%` : "-")
+                                : `${alloc.allocatedHours}h`}
+                            </TableCell>
                             <TableCell>
                               {new Date(alloc.startDate).toLocaleDateString('pt-BR')}
                             </TableCell>
@@ -432,7 +487,7 @@ export default function EmployeeAllocations() {
               )}
             </CardContent>
           </Card>
-        </>
+        </div>
       )}
     </div>
   );

@@ -27,21 +27,30 @@ export default function ProjectCapacity() {
   const { data: allocations, isLoading: allocLoading } = trpc.allocations.list.useQuery();
   const { data: employees } = trpc.employees.list.useQuery();
   const { data: clients } = trpc.clients.list.useQuery();
+  const { data: allocationMode } = trpc.settings.getAllocationMode.useQuery();
 
   const selectedProject = selectedProjectId ? projects?.find(p => p.id === selectedProjectId) : null;
   const projectAllocations = selectedProjectId 
     ? allocations?.filter(a => a.projectId === selectedProjectId) || []
     : [];
 
-  // Calcular estatísticas do projeto
-  const totalAllocatedHours = projectAllocations.reduce((sum, a) => sum + a.allocatedHours, 0);
+  // Calcular estatísticas do projeto baseado no modo configurado
+  const totalAllocatedHours = allocationMode === "percentage"
+    ? projectAllocations.reduce((sum, a) => {
+        const percentage = a.allocatedPercentage ? parseFloat(String(a.allocatedPercentage)) : 0;
+        return sum + percentage;
+      }, 0)
+    : projectAllocations.reduce((sum, a) => sum + a.allocatedHours, 0);
   
   // Distribuição por tipo de profissional
   const allocationByType: Record<string, number> = {};
   projectAllocations.forEach(alloc => {
     const emp = employees?.find(e => e.id === alloc.employeeId);
     if (emp) {
-      allocationByType[emp.type] = (allocationByType[emp.type] || 0) + alloc.allocatedHours;
+      const value = allocationMode === "percentage"
+        ? (alloc.allocatedPercentage ? parseFloat(String(alloc.allocatedPercentage)) : 0)
+        : alloc.allocatedHours;
+      allocationByType[emp.type] = (allocationByType[emp.type] || 0) + value;
     }
   });
 
@@ -62,7 +71,7 @@ export default function ProjectCapacity() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Capacidade por Projeto</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Alocação por Projeto</h1>
         <p className="text-muted-foreground mt-2">Visualizar alocação e capacidade de cada projeto</p>
       </div>
 
@@ -144,8 +153,14 @@ export default function ProjectCapacity() {
                 <CardTitle className="text-sm font-medium">Total Alocado</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalAllocatedHours} h</div>
-                <p className="text-xs text-muted-foreground mt-1">horas/mês</p>
+                <div className="text-2xl font-bold">
+                  {allocationMode === "percentage"
+                    ? `${totalAllocatedHours.toFixed(1)}%`
+                    : `${totalAllocatedHours} h`}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {allocationMode === "percentage" ? "percentual" : "horas/mês"}
+                </p>
               </CardContent>
             </Card>
 
@@ -175,7 +190,11 @@ export default function ProjectCapacity() {
             <Card>
               <CardHeader>
                 <CardTitle>Alocação por Tipo de Profissional</CardTitle>
-                <CardDescription>Distribuição de horas por especialidade</CardDescription>
+                <CardDescription>
+                  {allocationMode === "percentage" 
+                    ? "Distribuição de percentual por especialidade" 
+                    : "Distribuição de horas por especialidade"}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {allocLoading ? (
@@ -243,7 +262,7 @@ export default function ProjectCapacity() {
                       <TableRow>
                         <TableHead>Colaborador</TableHead>
                         <TableHead>Tipo</TableHead>
-                        <TableHead>Horas Alocadas</TableHead>
+                        <TableHead>{allocationMode === "percentage" ? "Percentual" : "Horas Alocadas"}</TableHead>
                         <TableHead>Data de Início</TableHead>
                         <TableHead>Data de Fim</TableHead>
                       </TableRow>
@@ -259,7 +278,11 @@ export default function ProjectCapacity() {
                                 {emp?.type.charAt(0).toUpperCase()}
                                 {emp?.type.slice(1)}
                               </TableCell>
-                              <TableCell>{alloc.allocatedHours}h</TableCell>
+                              <TableCell>
+                                {allocationMode === "percentage"
+                                  ? (alloc.allocatedPercentage ? `${parseFloat(String(alloc.allocatedPercentage)).toFixed(2)}%` : "-")
+                                  : `${alloc.allocatedHours}h`}
+                              </TableCell>
                               <TableCell>
                                 {new Date(alloc.startDate).toLocaleDateString('pt-BR')}
                               </TableCell>

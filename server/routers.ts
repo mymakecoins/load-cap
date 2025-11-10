@@ -1,11 +1,12 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
+import { publicProcedure, router, protectedProcedure, adminProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import * as db from "./db";
 import { authRouter } from "./routers/auth";
+import { calculateHoursFromPercentage, calculatePercentageFromHours, datesOverlap } from "./utils/allocations";
 
 // Helper to check if user is coordinator
 const isCoordinator = (role: string) => role === "coordinator" || role === "admin";
@@ -254,7 +255,8 @@ export const appRouter = router({
       .input(z.object({
         employeeId: z.number(),
         projectId: z.number(),
-        allocatedHours: z.number().int().positive(),
+        allocatedHours: z.number().int().positive().optional(),
+        allocatedPercentage: z.number().min(0).max(100).optional(),
         startDate: z.date(),
         endDate: z.date().optional(),
       }))
@@ -263,10 +265,84 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN", message: "Apenas coordenadores podem criar alocacoes" });
         }
         
+        // Obter modo de alocação configurado
+        const allocationMode = await db.getAllocationMode();
+        
+        // Buscar colaborador para obter capacidade mensal
+        const employee = await db.getEmployeeById(input.employeeId);
+        if (!employee) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Colaborador não encontrado" });
+        }
+        
+        let allocatedHours: number;
+        let allocatedPercentage: number | null = null;
+        
+        if (allocationMode === "percentage") {
+          // Modo percentual: validar que percentual foi fornecido
+          if (input.allocatedPercentage === undefined) {
+            throw new TRPCError({ 
+              code: "BAD_REQUEST", 
+              message: "Percentual de alocação é obrigatório no modo percentual" 
+            });
+          }
+          
+          allocatedPercentage = input.allocatedPercentage;
+          
+          // Calcular horas a partir do percentual
+          allocatedHours = calculateHoursFromPercentage(
+            allocatedPercentage,
+            employee.monthlyCapacityHours,
+            input.startDate,
+            input.endDate || null
+          );
+          
+          // Validar que soma de percentuais não exceda 100% no período
+          const existingAllocations = await db.getAllocationsByEmployee(input.employeeId);
+          const overlappingAllocations = existingAllocations.filter(alloc => {
+            return datesOverlap(
+              input.startDate,
+              input.endDate || new Date(),
+              alloc.startDate,
+              alloc.endDate || null
+            );
+          });
+          
+          const totalPercentage = overlappingAllocations.reduce(
+            (sum, alloc) => sum + (alloc.allocatedPercentage ? parseFloat(String(alloc.allocatedPercentage)) : 0),
+            0
+          );
+          
+          if (totalPercentage + allocatedPercentage > 100) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Alocação excede 100% do tempo disponível. Total atual: ${totalPercentage.toFixed(2)}%`
+            });
+          }
+        } else {
+          // Modo horas: validar que horas foram fornecidas
+          if (input.allocatedHours === undefined) {
+            throw new TRPCError({ 
+              code: "BAD_REQUEST", 
+              message: "Horas alocadas são obrigatórias no modo horas" 
+            });
+          }
+          
+          allocatedHours = input.allocatedHours;
+          
+          // Calcular percentual a partir das horas (opcional, para histórico)
+          allocatedPercentage = calculatePercentageFromHours(
+            allocatedHours,
+            employee.monthlyCapacityHours,
+            input.startDate,
+            input.endDate || null
+          );
+        }
+        
         const allocation = await db.createAllocation({
           employeeId: input.employeeId,
           projectId: input.projectId,
-          allocatedHours: input.allocatedHours,
+          allocatedHours,
+          allocatedPercentage: allocatedPercentage ? String(allocatedPercentage) : null,
           startDate: input.startDate,
           endDate: input.endDate ?? null,
           isActive: true,
@@ -277,7 +353,8 @@ export const appRouter = router({
           allocationId: null,
           employeeId: input.employeeId,
           projectId: input.projectId,
-          allocatedHours: input.allocatedHours,
+          allocatedHours,
+          allocatedPercentage: allocatedPercentage ? String(allocatedPercentage) : null,
           startDate: input.startDate,
           endDate: input.endDate ?? null,
           action: "created",
@@ -291,6 +368,7 @@ export const appRouter = router({
       .input(z.object({
         id: z.number(),
         allocatedHours: z.number().int().positive().optional(),
+        allocatedPercentage: z.number().min(0).max(100).optional(),
         endDate: z.date().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
@@ -303,17 +381,84 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "Alocacao nao encontrada" });
         }
         
-        const { id, ...data } = input;
-        const result = await db.updateAllocation(id, data);
+        // Obter modo de alocação configurado
+        const allocationMode = await db.getAllocationMode();
+        
+        // Buscar colaborador
+        const employee = await db.getEmployeeById(allocation.employeeId);
+        if (!employee) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Colaborador não encontrado" });
+        }
+        
+        let allocatedHours = allocation.allocatedHours;
+        let allocatedPercentage: number | null = allocation.allocatedPercentage ? parseFloat(String(allocation.allocatedPercentage)) : null;
+        
+        if (allocationMode === "percentage") {
+          if (input.allocatedPercentage !== undefined) {
+            allocatedPercentage = input.allocatedPercentage;
+            allocatedHours = calculateHoursFromPercentage(
+              allocatedPercentage,
+              employee.monthlyCapacityHours,
+              allocation.startDate,
+              input.endDate ?? allocation.endDate ?? null
+            );
+            
+            // Validar soma de percentuais (excluindo a alocação atual)
+            const existingAllocations = await db.getAllocationsByEmployee(allocation.employeeId);
+            const overlappingAllocations = existingAllocations.filter(alloc => {
+              if (alloc.id === allocation.id) return false; // Excluir a alocação atual
+              return datesOverlap(
+                allocation.startDate,
+                input.endDate ?? allocation.endDate ?? new Date(),
+                alloc.startDate,
+                alloc.endDate ?? null
+              );
+            });
+            
+            const totalPercentage = overlappingAllocations.reduce(
+              (sum, alloc) => sum + (alloc.allocatedPercentage ? parseFloat(String(alloc.allocatedPercentage)) : 0),
+              0
+            );
+            
+            if (totalPercentage + allocatedPercentage > 100) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `Alocação excede 100% do tempo disponível. Total atual: ${totalPercentage.toFixed(2)}%`
+              });
+            }
+          }
+        } else {
+          if (input.allocatedHours !== undefined) {
+            allocatedHours = input.allocatedHours;
+            allocatedPercentage = calculatePercentageFromHours(
+              allocatedHours,
+              employee.monthlyCapacityHours,
+              allocation.startDate,
+              input.endDate ?? allocation.endDate ?? null
+            );
+          }
+        }
+        
+        const updateData: any = {
+          allocatedHours,
+          endDate: input.endDate ?? allocation.endDate,
+        };
+        
+        if (allocatedPercentage !== null) {
+          updateData.allocatedPercentage = String(allocatedPercentage);
+        }
+        
+        const result = await db.updateAllocation(input.id, updateData);
         
         // Log to history
         await db.createAllocationHistory({
-          allocationId: id,
+          allocationId: input.id,
           employeeId: allocation.employeeId,
           projectId: allocation.projectId,
-          allocatedHours: data.allocatedHours || allocation.allocatedHours,
+          allocatedHours,
+          allocatedPercentage: allocatedPercentage ? String(allocatedPercentage) : null,
           startDate: allocation.startDate,
-          endDate: data.endDate ?? allocation.endDate,
+          endDate: input.endDate ?? allocation.endDate ?? null,
           action: "updated",
           changedBy: ctx.user?.id ?? null,
         });
@@ -350,9 +495,14 @@ export const appRouter = router({
         return result;
       }),
     
-    getHistory: protectedProcedure.query(async () => {
-      return db.getAllocationHistory();
-    }),
+    getHistory: protectedProcedure
+      .input(z.object({
+        employeeId: z.number().optional(),
+        projectId: z.number().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        return db.getAllocationHistory(input?.employeeId, input?.projectId);
+      }),
   }),
 
   users: router({
@@ -536,6 +686,44 @@ export const appRouter = router({
           });
         }
       }),
+  }),
+
+  // ===== SETTINGS ROUTER (Admin only) =====
+  settings: router({
+    getAll: adminProcedure.query(async () => {
+      return db.getAllSystemSettings();
+    }),
+    
+    get: adminProcedure
+      .input(z.object({ key: z.string() }))
+      .query(async ({ input }) => {
+        return db.getSystemSetting(input.key);
+      }),
+    
+    set: adminProcedure
+      .input(z.object({
+        key: z.string(),
+        value: z.string(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário não autenticado" });
+        }
+        
+        await db.setSystemSetting(
+          input.key,
+          input.value,
+          input.description || null,
+          ctx.user.id
+        );
+        
+        return { success: true };
+      }),
+    
+    getAllocationMode: protectedProcedure.query(async () => {
+      return db.getAllocationMode();
+    }),
   }),
 });
 

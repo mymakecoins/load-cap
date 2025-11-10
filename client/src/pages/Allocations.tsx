@@ -82,6 +82,7 @@ export default function Allocations() {
     employeeId: 0,
     projectId: 0,
     allocatedHours: 0,
+    allocatedPercentage: 0,
     startDate: "",
     endDate: "",
   });
@@ -89,6 +90,7 @@ export default function Allocations() {
   const { data: allocations, isLoading: allocLoading, refetch } = trpc.allocations.list.useQuery();
   const { data: employees } = trpc.employees.list.useQuery();
   const { data: projects } = trpc.projects.list.useQuery();
+  const { data: allocationMode } = trpc.settings.getAllocationMode.useQuery();
   
   const createMutation = trpc.allocations.create.useMutation();
   const updateMutation = trpc.allocations.update.useMutation();
@@ -101,24 +103,37 @@ export default function Allocations() {
       const data: any = {
         employeeId: formData.employeeId,
         projectId: formData.projectId,
-        allocatedHours: formData.allocatedHours,
         startDate: new Date(formData.startDate),
         endDate: formData.endDate ? new Date(formData.endDate) : undefined,
       };
 
+      // Adicionar campo baseado no modo configurado
+      if (allocationMode === "percentage") {
+        data.allocatedPercentage = formData.allocatedPercentage;
+      } else {
+        data.allocatedHours = formData.allocatedHours;
+      }
+
       if (editingId) {
-        await updateMutation.mutateAsync({ id: editingId, allocatedHours: data.allocatedHours, endDate: data.endDate });
+        const updateData: any = { id: editingId, endDate: data.endDate };
+        if (allocationMode === "percentage") {
+          updateData.allocatedPercentage = formData.allocatedPercentage;
+        } else {
+          updateData.allocatedHours = formData.allocatedHours;
+        }
+        await updateMutation.mutateAsync(updateData);
         toast.success("Alocação atualizada com sucesso");
       } else {
         await createMutation.mutateAsync(data);
         toast.success("Alocação criada com sucesso");
       }
-      setFormData({ employeeId: 0, projectId: 0, allocatedHours: 0, startDate: "", endDate: "" });
+      setFormData({ employeeId: 0, projectId: 0, allocatedHours: 0, allocatedPercentage: 0, startDate: "", endDate: "" });
       setEditingId(null);
       setOpen(false);
       refetch();
-    } catch (error) {
-      toast.error("Erro ao salvar alocação");
+    } catch (error: any) {
+      const errorMessage = error?.data?.message || error?.message || "Erro ao salvar alocação";
+      toast.error(errorMessage);
     }
   };
 
@@ -126,7 +141,8 @@ export default function Allocations() {
     setFormData({
       employeeId: allocation.employeeId,
       projectId: allocation.projectId,
-      allocatedHours: allocation.allocatedHours,
+      allocatedHours: allocation.allocatedHours || 0,
+      allocatedPercentage: allocation.allocatedPercentage ? parseFloat(String(allocation.allocatedPercentage)) : 0,
       startDate: new Date(allocation.startDate).toISOString().split('T')[0],
       endDate: allocation.endDate ? new Date(allocation.endDate).toISOString().split('T')[0] : "",
     });
@@ -156,7 +172,7 @@ export default function Allocations() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { setEditingId(null); setFormData({ employeeId: 0, projectId: 0, allocatedHours: 0, startDate: "", endDate: "" }); }}>
+            <Button onClick={() => { setEditingId(null); setFormData({ employeeId: 0, projectId: 0, allocatedHours: 0, allocatedPercentage: 0, startDate: "", endDate: "" }); }}>
               <Plus className="mr-2 h-4 w-4" />
               Nova Alocação
             </Button>
@@ -201,17 +217,36 @@ export default function Allocations() {
                   </Select>
                 </div>
               </div>
-              <div>
-                <Label htmlFor="allocatedHours">Horas Alocadas *</Label>
-                <Input
-                  id="allocatedHours"
-                  type="number"
-                  min="1"
-                  value={formData.allocatedHours}
-                  onChange={(e) => setFormData({ ...formData, allocatedHours: parseInt(e.target.value) })}
-                  required
-                />
-              </div>
+              {allocationMode === "percentage" ? (
+                <div>
+                  <Label htmlFor="allocatedPercentage">Percentual de Alocação (%) *</Label>
+                  <Input
+                    id="allocatedPercentage"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={formData.allocatedPercentage}
+                    onChange={(e) => setFormData({ ...formData, allocatedPercentage: parseFloat(e.target.value) || 0 })}
+                    required
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Insira o percentual de alocação (0-100%). O sistema calculará as horas automaticamente.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <Label htmlFor="allocatedHours">Horas Alocadas *</Label>
+                  <Input
+                    id="allocatedHours"
+                    type="number"
+                    min="1"
+                    value={formData.allocatedHours}
+                    onChange={(e) => setFormData({ ...formData, allocatedHours: parseInt(e.target.value) || 0 })}
+                    required
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="startDate">Data de Início *</Label>
@@ -290,7 +325,7 @@ export default function Allocations() {
                   <TableRow>
                     <TableHead>Colaborador</TableHead>
                     <TableHead>Projeto</TableHead>
-                    <TableHead>Horas</TableHead>
+                    <TableHead>{allocationMode === "percentage" ? "Percentual" : "Horas"}</TableHead>
                     <TableHead>Data de Início</TableHead>
                     <TableHead>Data de Fim</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -310,7 +345,12 @@ export default function Allocations() {
                         <TableCell>
                           {projects?.find(p => p.id === alloc.projectId)?.name || "-"}
                         </TableCell>
-                        <TableCell>{alloc.allocatedHours}h</TableCell>
+                        <TableCell>
+                          {allocationMode === "percentage" 
+                            ? (alloc.allocatedPercentage ? `${parseFloat(String(alloc.allocatedPercentage)).toFixed(2)}%` : "-")
+                            : `${alloc.allocatedHours}h`
+                          }
+                        </TableCell>
                         <TableCell>
                           {new Date(alloc.startDate).toLocaleDateString('pt-BR')}
                         </TableCell>
