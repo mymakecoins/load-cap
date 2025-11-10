@@ -1,0 +1,63 @@
+# Dependências
+node_modules
+.pnpm-store
+
+# Build artifacts
+dist
+*.log
+
+# Ambiente e configuração
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+
+# Git
+.git
+.gitignore
+.git-commit-instructions.md
+
+# Documentação
+*.md
+!README.md
+docs
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Testes
+coverage
+.nyc_output
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Temporários
+tmp
+temp
+*.tmp
+.cache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Outros
+*.patch
+.prettierrc
+.prettierignore
+vitest.config.ts
+tsconfig.json
+

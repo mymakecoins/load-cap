@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # Banco de dados MySQL
+  db:
+    image: mysql:8.0
+    container_name: load-cap-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-team_management}
+      MYSQL_USER: ${MYSQL_USER:-team_management}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-team_management_password}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./drizzle/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - load-cap-network
+
+  # Aplicação
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: load-cap-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: mysql://${MYSQL_USER:-team_management}:${MYSQL_PASSWORD:-team_management_password}@db:3306/${MYSQL_DATABASE:-team_management}
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
+      VITE_APP_TITLE: ${VITE_APP_TITLE:-Sistema de Gestão de Times}
+      VITE_APP_LOGO: ${VITE_APP_LOGO:-/logo.jpeg}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Montar apenas o necessário para desenvolvimento (opcional)
+      - ./logs:/app/logs
+    networks:
+      - load-cap-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  load-cap-network:
+    driver: bridge
+

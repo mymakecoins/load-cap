@@ -34,6 +34,31 @@ Uma aplicação web completa para gerenciar times, projetos e alocações de col
 
 ## 📦 Instalação
 
+### Opção 1: Docker (Recomendado para Produção)
+
+A forma mais fácil de executar a aplicação é usando Docker:
+
+```bash
+# 1. Configure variáveis de ambiente
+cp .env.docker.example .env
+# Edite o arquivo .env com suas configurações
+
+# 2. Inicie os serviços
+docker compose up -d
+
+# 3. Execute as migrações
+docker compose exec app pnpm db:push
+
+# 4. (Opcional) Popule o banco com dados de exemplo
+docker compose exec app pnpm db:seed
+```
+
+A aplicação estará disponível em `http://localhost:3000`
+
+> **📖 Para mais detalhes sobre Docker**, consulte [DOCKER.md](./DOCKER.md)
+
+### Opção 2: Instalação Local
+
 ### Pré-requisitos
 - Node.js 22+
 - pnpm 9+
