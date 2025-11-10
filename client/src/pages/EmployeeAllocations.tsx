@@ -47,6 +47,7 @@ function getEmployeeTypeLabel(type: string): string {
 export default function EmployeeAllocations() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [selectedEmployeeType, setSelectedEmployeeType] = useState<string>("");
+  const [utilizationFilter, setUtilizationFilter] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const allocationDataRef = useRef<HTMLDivElement>(null);
@@ -75,7 +76,7 @@ export default function EmployeeAllocations() {
   }
 
   // Calcular taxa de utilização para cada colaborador
-  const employeeUtilization = filteredEmployees.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map(emp => {
+  const employeeUtilization = filteredEmployees.map(emp => {
     let empAllocations = allocations?.filter(a => a.employeeId === emp.id) || [];
     
     // Filtrar por datas se especificadas
@@ -109,7 +110,18 @@ export default function EmployeeAllocations() {
       utilizationRate: parseFloat(utilizationRate.toFixed(1)),
       projectCount: uniqueProjects,
     };
-  });
+  })
+  // Aplicar filtro de taxa de utilização
+  .filter(emp => {
+    if (!utilizationFilter) return true;
+    const rate = emp.utilizationRate;
+    if (utilizationFilter === "below_50") return rate < 50;
+    if (utilizationFilter === "below_100") return rate < 100;
+    if (utilizationFilter === "above_100") return rate >= 100;
+    return true;
+  })
+  // Ordenar por taxa de utilização (menor para maior)
+  .sort((a, b) => a.utilizationRate - b.utilizationRate);
 
   const selectedEmployee = selectedEmployeeId ? employees?.find(e => e.id === selectedEmployeeId) : null;
   let employeeAllocations = selectedEmployeeId 
@@ -178,10 +190,10 @@ export default function EmployeeAllocations() {
       <Card>
         <CardHeader>
           <CardTitle>Filtros</CardTitle>
-          <CardDescription>Filtre colaboradores por período e tipo</CardDescription>
+          <CardDescription>Filtre colaboradores por período, tipo e taxa de utilização</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="text-sm font-medium">Data Início</label>
               <input
@@ -215,6 +227,19 @@ export default function EmployeeAllocations() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <label className="text-sm font-medium">Taxa de Utilização</label>
+              <Select value={utilizationFilter} onValueChange={setUtilizationFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as taxas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="below_50">Abaixo de 50%</SelectItem>
+                  <SelectItem value="below_100">Abaixo de 100%</SelectItem>
+                  <SelectItem value="above_100">Acima de 100%</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => handlePresetWeek(0)}>
@@ -223,7 +248,12 @@ export default function EmployeeAllocations() {
             <Button variant="outline" size="sm" onClick={() => handlePresetWeek(1)}>
               Próxima Semana
             </Button>
-            <Button variant="outline" size="sm" onClick={() => { setStartDate(""); setEndDate(""); setSelectedEmployeeType(""); }}>
+            <Button variant="outline" size="sm" onClick={() => { 
+              setStartDate(""); 
+              setEndDate(""); 
+              setSelectedEmployeeType(""); 
+              setUtilizationFilter(""); 
+            }}>
               Limpar Filtros
             </Button>
           </div>
