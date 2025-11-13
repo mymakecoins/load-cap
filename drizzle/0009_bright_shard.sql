@@ -1,0 +1,1 @@
+ALTER TABLE `allocation_history` ADD `comment` text;

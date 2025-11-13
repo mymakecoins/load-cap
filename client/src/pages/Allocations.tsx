@@ -28,8 +28,19 @@ import {
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus, Trash2, Edit2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Função para calcular segunda-feira da semana atual
 function getMondayCurrentWeek(): string {
@@ -78,6 +89,11 @@ function getFridayNextWeek(): string {
 export default function Allocations() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [comment, setComment] = useState("");
+  const [editComment, setEditComment] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteAllocationId, setDeleteAllocationId] = useState<number | null>(null);
+  const [deleteComment, setDeleteComment] = useState("");
   const [formData, setFormData] = useState({
     employeeId: 0,
     projectId: 0,
@@ -121,11 +137,19 @@ export default function Allocations() {
         } else {
           updateData.allocatedHours = formData.allocatedHours;
         }
+        if (editComment.trim()) {
+          updateData.comment = editComment.trim();
+        }
         await updateMutation.mutateAsync(updateData);
         toast.success("Alocação atualizada com sucesso");
+        setEditComment("");
       } else {
+        if (comment.trim()) {
+          data.comment = comment.trim();
+        }
         await createMutation.mutateAsync(data);
         toast.success("Alocação criada com sucesso");
+        setComment("");
       }
       setFormData({ employeeId: 0, projectId: 0, allocatedHours: 0, allocatedPercentage: 0, startDate: "", endDate: "" });
       setEditingId(null);
@@ -147,16 +171,29 @@ export default function Allocations() {
       endDate: allocation.endDate ? new Date(allocation.endDate).toISOString().split('T')[0] : "",
     });
     setEditingId(allocation.id);
+    setEditComment("");
     setOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Tem certeza que deseja deletar esta alocação? Esta ação não pode ser desfeita.")) {
-      return;
-    }
+  const handleDelete = (id: number) => {
+    setDeleteAllocationId(id);
+    setDeleteComment("");
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteAllocationId) return;
+    
     try {
-      await deleteMutation.mutateAsync({ id });
+      const deleteData: any = { id: deleteAllocationId };
+      if (deleteComment.trim()) {
+        deleteData.comment = deleteComment.trim();
+      }
+      await deleteMutation.mutateAsync(deleteData);
       toast.success("Alocação deletada com sucesso");
+      setDeleteDialogOpen(false);
+      setDeleteAllocationId(null);
+      setDeleteComment("");
       refetch();
     } catch (error) {
       toast.error("Erro ao deletar alocação");
@@ -172,7 +209,11 @@ export default function Allocations() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { setEditingId(null); setFormData({ employeeId: 0, projectId: 0, allocatedHours: 0, allocatedPercentage: 0, startDate: "", endDate: "" }); }}>
+            <Button onClick={() => { 
+              setEditingId(null); 
+              setComment("");
+              setFormData({ employeeId: 0, projectId: 0, allocatedHours: 0, allocatedPercentage: 0, startDate: "", endDate: "" }); 
+            }}>
               <Plus className="mr-2 h-4 w-4" />
               Nova Alocação
             </Button>
@@ -298,6 +339,37 @@ export default function Allocations() {
                   Semana Seguinte
                 </Button>
               </div>
+              {editingId ? (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-comment">Comentário (opcional)</Label>
+                  <Textarea
+                    id="edit-comment"
+                    placeholder="Explique o motivo desta alteração..."
+                    value={editComment}
+                    onChange={(e) => setEditComment(e.target.value)}
+                    maxLength={500}
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {editComment.length}/500 caracteres
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="comment">Comentário (opcional)</Label>
+                  <Textarea
+                    id="comment"
+                    placeholder="Explique o motivo desta alocação..."
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    maxLength={500}
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {comment.length}/500 caracteres
+                  </p>
+                </div>
+              )}
               <Button type="submit" className="w-full">
                 {editingId ? "Atualizar" : "Criar"}
               </Button>
@@ -305,6 +377,36 @@ export default function Allocations() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Dialog de confirmação de deleção */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja deletar esta alocação? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 py-4">
+            <Label htmlFor="delete-comment">Comentário (opcional)</Label>
+            <Textarea
+              id="delete-comment"
+              placeholder="Por que está removendo esta alocação?"
+              value={deleteComment}
+              onChange={(e) => setDeleteComment(e.target.value)}
+              maxLength={500}
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              {deleteComment.length}/500 caracteres
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Deletar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card>
         <CardHeader>

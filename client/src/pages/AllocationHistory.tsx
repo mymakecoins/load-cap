@@ -20,7 +20,12 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from "recharts";
 
 function getMonthDates() {
   const today = new Date();
@@ -38,8 +43,10 @@ export default function AllocationHistory() {
   const monthDates = getMonthDates();
   const [filterEmployeeId, setFilterEmployeeId] = useState<number | null>(null);
   const [filterProjectId, setFilterProjectId] = useState<number | null>(null);
+  const [filterChangedBy, setFilterChangedBy] = useState<number | null>(null);
   const [startDate, setStartDate] = useState(monthDates.start);
   const [endDate, setEndDate] = useState(monthDates.end);
+  const [searchComment, setSearchComment] = useState("");
 
   const { data: employees } = trpc.employees.list.useQuery();
   const { data: projects } = trpc.projects.list.useQuery();
@@ -67,6 +74,20 @@ export default function AllocationHistory() {
   // Filtrar histórico (agora apenas por período, pois employeeId e projectId já vêm filtrados do backend)
   let filteredHistory = history || [];
   
+  // Filtrar por comentário
+  if (searchComment) {
+    filteredHistory = filteredHistory.filter((h: any) =>
+      h.comment?.toLowerCase().includes(searchComment.toLowerCase())
+    );
+  }
+  
+  // Filtrar por usuário que fez a mudança
+  if (filterChangedBy) {
+    filteredHistory = filteredHistory.filter(
+      (h: any) => h.changedBy === filterChangedBy
+    );
+  }
+  
   // Filtrar projetos disponíveis baseado no colaborador selecionado
   const availableProjects = filterEmployeeId && employeeHistory
     ? employeeHistory
@@ -76,6 +97,20 @@ export default function AllocationHistory() {
         .filter((p): p is NonNullable<typeof p> => p !== undefined)
         .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
     : projects || [];
+  
+  // Obter lista de usuários únicos que fizeram mudanças
+  const changedByUsers = Array.from(
+    new Map(
+      (history || []).map((h: any) => [
+        h.changedBy, 
+        { 
+          id: h.changedBy, 
+          name: h.changedByName || "Usuário deletado",
+          email: h.changedByEmail || "-"
+        }
+      ])
+    ).values()
+  ).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   
   // Filtrar por período da alocação (não pela data de criação do registro)
   if (startDate || endDate) {
@@ -134,7 +169,35 @@ export default function AllocationHistory() {
           <CardDescription>Filtre o histórico por colaborador, projeto e período</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+              <Label htmlFor="comment-search">Buscar por comentário</Label>
+              <Input
+                id="comment-search"
+                placeholder="Buscar por comentário..."
+                value={searchComment}
+                onChange={(e) => setSearchComment(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="user-filter">Modificado por</Label>
+              <Select 
+                value={filterChangedBy?.toString() || ""} 
+                onValueChange={(value) => setFilterChangedBy(value ? parseInt(value) : null)}
+              >
+                <SelectTrigger id="user-filter">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos</SelectItem>
+                  {changedByUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.id.toString()}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label htmlFor="employee-filter">Colaborador</Label>
               <div className="flex gap-2">
@@ -253,7 +316,7 @@ export default function AllocationHistory() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
-                <Tooltip />
+                <RechartsTooltip />
                 <Legend />
                 <Line 
                   type="monotone" 
@@ -293,8 +356,9 @@ export default function AllocationHistory() {
                     <TableHead>Colaborador</TableHead>
                     <TableHead>Projeto</TableHead>
                     <TableHead>Tipo de Mudança</TableHead>
+                    <TableHead>Modificado por</TableHead>
                     <TableHead>{allocationMode === "percentage" ? "Percentual" : "Horas Alteradas"}</TableHead>
-                    <TableHead>Observações</TableHead>
+                    <TableHead>Comentário</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -316,18 +380,43 @@ export default function AllocationHistory() {
                           {record.action === "deleted" && "Removido"}
                         </TableCell>
                         <TableCell>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help">
+                                {record.changedByName || "Usuário deletado"}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{record.changedByEmail || "-"}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
                           {allocationMode === "percentage"
                             ? (record.allocatedPercentage ? `${parseFloat(String(record.allocatedPercentage)).toFixed(2)}%` : "-")
                             : `${record.allocatedHours}h`}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          -
+                        <TableCell className="max-w-xs">
+                          {record.comment ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="truncate cursor-help block">
+                                  {record.comment}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="max-w-sm">{record.comment}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         Nenhum histórico encontrado
                       </TableCell>
                     </TableRow>

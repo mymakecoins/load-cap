@@ -64,6 +64,20 @@
       "when": 1762801077443,
       "tag": "0008_slow_kang",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1763066699548,
+      "tag": "0009_bright_shard",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1763068052736,
+      "tag": "0010_white_nekra",
+      "breakpoints": true
     }
   ]
 }

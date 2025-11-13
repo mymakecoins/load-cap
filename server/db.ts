@@ -243,6 +243,12 @@ export async function deleteAllocation(id: number) {
 export async function createAllocationHistory(data: Omit<AllocationHistory, 'id' | 'createdAt'>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  
+  // Validação: changedBy é obrigatório
+  if (!data.changedBy) {
+    throw new Error("changedBy é obrigatório para criar histórico de alocação");
+  }
+  
   return db.insert(allocationHistory).values(data);
 }
 

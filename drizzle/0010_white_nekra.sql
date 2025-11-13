@@ -1,0 +1,1 @@
+ALTER TABLE `allocation_history` MODIFY COLUMN `changedBy` int NOT NULL;

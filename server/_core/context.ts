@@ -28,13 +28,13 @@ export async function createContext(
     const cookies = parseCookies(opts.req.headers.cookie);
     const sessionCookie = cookies.get(COOKIE_NAME);
     
-    if (sessionCookie) {
-      // O cookie contém o ID do usuário (número)
-      const userId = parseInt(sessionCookie, 10);
-      if (!isNaN(userId)) {
-        user = await db.getUserById(userId);
+      if (sessionCookie) {
+        // O cookie contém o ID do usuário (número)
+        const userId = parseInt(sessionCookie, 10);
+        if (!isNaN(userId)) {
+          user = (await db.getUserById(userId)) ?? null;
+        }
       }
-    }
   } catch (error) {
     // Authentication is optional for public procedures.
     console.warn("[Auth] Error authenticating user:", error);

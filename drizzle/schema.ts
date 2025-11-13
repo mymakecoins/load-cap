@@ -123,7 +123,8 @@ export const allocationHistory = mysqlTable("allocation_history", {
   startDate: timestamp("startDate").notNull(),
   endDate: timestamp("endDate"),
   action: mysqlEnum("action", ["created", "updated", "deleted"]).notNull(),
-  changedBy: int("changedBy"),
+  changedBy: int("changedBy").notNull(), // MODIFICADO: agora obrigatório
+  comment: text("comment"), // Comentário opcional sobre a mudança
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -206,6 +207,10 @@ export const allocationHistoryRelations = relations(allocationHistory, ({ one })
   project: one(projects, {
     fields: [allocationHistory.projectId],
     references: [projects.id],
+  }),
+  changedByUser: one(users, {
+    fields: [allocationHistory.changedBy],
+    references: [users.id],
   }),
 }));
 

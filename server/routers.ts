@@ -259,6 +259,7 @@ export const appRouter = router({
         allocatedPercentage: z.number().min(0).max(100).optional(),
         startDate: z.date(),
         endDate: z.date().optional(),
+        comment: z.string().max(500).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         if (!isCoordinator(ctx.user?.role || "")) {
@@ -348,6 +349,14 @@ export const appRouter = router({
           isActive: true,
         });
         
+        // Validação: usuário deve estar autenticado
+        if (!ctx.user?.id) {
+          throw new TRPCError({ 
+            code: "UNAUTHORIZED", 
+            message: "Usuário não autenticado" 
+          });
+        }
+        
         // Log to history
         await db.createAllocationHistory({
           allocationId: null,
@@ -358,7 +367,8 @@ export const appRouter = router({
           startDate: input.startDate,
           endDate: input.endDate ?? null,
           action: "created",
-          changedBy: ctx.user?.id ?? null,
+          changedBy: ctx.user.id, // MODIFICADO: não usa ?? null, já validado acima
+          comment: input.comment ?? null,
         });
         
         return allocation;
@@ -370,6 +380,7 @@ export const appRouter = router({
         allocatedHours: z.number().int().positive().optional(),
         allocatedPercentage: z.number().min(0).max(100).optional(),
         endDate: z.date().optional(),
+        comment: z.string().max(500).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         if (!isCoordinator(ctx.user?.role || "")) {
@@ -450,6 +461,14 @@ export const appRouter = router({
         
         const result = await db.updateAllocation(input.id, updateData);
         
+        // Validação: usuário deve estar autenticado
+        if (!ctx.user?.id) {
+          throw new TRPCError({ 
+            code: "UNAUTHORIZED", 
+            message: "Usuário não autenticado" 
+          });
+        }
+        
         // Log to history
         await db.createAllocationHistory({
           allocationId: input.id,
@@ -460,14 +479,18 @@ export const appRouter = router({
           startDate: allocation.startDate,
           endDate: input.endDate ?? allocation.endDate ?? null,
           action: "updated",
-          changedBy: ctx.user?.id ?? null,
+          changedBy: ctx.user.id, // MODIFICADO: não usa ?? null, já validado acima
+          comment: input.comment ?? null,
         });
         
         return result;
       }),
     
     delete: protectedProcedure
-      .input(z.object({ id: z.number() }))
+      .input(z.object({ 
+        id: z.number(),
+        comment: z.string().max(500).optional(),
+      }))
       .mutation(async ({ input, ctx }) => {
         if (!isCoordinator(ctx.user?.role || "")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Apenas coordenadores podem deletar alocacoes" });
@@ -480,16 +503,26 @@ export const appRouter = router({
         
         const result = await db.deleteAllocation(input.id);
         
+        // Validação: usuário deve estar autenticado
+        if (!ctx.user?.id) {
+          throw new TRPCError({ 
+            code: "UNAUTHORIZED", 
+            message: "Usuário não autenticado" 
+          });
+        }
+        
         // Log to history
         await db.createAllocationHistory({
           allocationId: input.id,
           employeeId: allocation.employeeId,
           projectId: allocation.projectId,
           allocatedHours: allocation.allocatedHours,
+          allocatedPercentage: allocation.allocatedPercentage,
           startDate: allocation.startDate,
           endDate: allocation.endDate ?? null,
           action: "deleted",
-          changedBy: ctx.user?.id ?? null,
+          changedBy: ctx.user.id, // MODIFICADO: não usa ?? null, já validado acima
+          comment: input.comment ?? null,
         });
         
         return result;
@@ -501,7 +534,30 @@ export const appRouter = router({
         projectId: z.number().optional(),
       }).optional())
       .query(async ({ input }) => {
-        return db.getAllocationHistory(input?.employeeId, input?.projectId);
+        const history = await db.getAllocationHistory(input?.employeeId, input?.projectId);
+        
+        // Enriquecer com dados do usuário
+        const enrichedHistory = await Promise.all(
+          history.map(async (record) => {
+            try {
+              const user = await db.getUserById(record.changedBy);
+              return {
+                ...record,
+                changedByName: user?.name || "Usuário deletado",
+                changedByEmail: user?.email || "-",
+              };
+            } catch (error) {
+              // Se usuário não existir, usar valores padrão
+              return {
+                ...record,
+                changedByName: "Usuário deletado",
+                changedByEmail: "-",
+              };
+            }
+          })
+        );
+        
+        return enrichedHistory;
       }),
   }),
 
