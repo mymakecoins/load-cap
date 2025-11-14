@@ -30,6 +30,7 @@ import { trpc } from "@/lib/trpc";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Plus, Trash2, Edit2 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from "recharts";
 
 const PROJECT_TYPES = [
   { value: "sustentacao", label: "Sustentação" },
@@ -81,6 +82,35 @@ export default function Projects() {
       );
     }).sort((a: any, b: any) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [projects, searchQuery, clients]);
+
+  // Dados para o gráfico de andamento dos projetos
+  const projectProgressData = projects?.map((proj) => ({
+    name: proj.name,
+    previsto: proj.plannedProgress || 0,
+    realizado: proj.actualProgress || 0,
+  })) || [];
+
+  // Função para determinar a cor do bullet baseado na comparação
+  const getBulletColor = (previsto: number, realizado: number): string => {
+    if (realizado < previsto) return '#ef4444'; // Vermelho
+    if (realizado === previsto) return '#f59e0b'; // Laranja
+    return '#10b981'; // Verde
+  };
+
+  // Componente customizado para o label do XAxis com bullet
+  const CustomXAxisTick = ({ x, y, payload }: any) => {
+    const data = projectProgressData.find((p) => p.name === payload.value);
+    const bulletColor = data ? getBulletColor(data.previsto, data.realizado) : '#6b7280';
+    
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text x={0} y={0} dy={16} textAnchor="end" fill="#666" transform="rotate(-90)">
+          <tspan fill={bulletColor}>● </tspan>
+          {payload.value}
+        </text>
+      </g>
+    );
+  };
   
   const createMutation = trpc.projects.create.useMutation();
   const updateMutation = trpc.projects.update.useMutation();
@@ -308,6 +338,72 @@ export default function Projects() {
             </form>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Gráfico de Andamento dos Projetos */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="md:col-span-3">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div>
+                <CardTitle>Andamento dos Projetos</CardTitle>
+                <CardDescription>
+                  Comparação entre progresso previsto e realizado por projeto
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+                  <span className="text-sm text-muted-foreground">Previsto</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#10b981' }}></div>
+                  <span className="text-sm text-muted-foreground">Realizado</span>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {projLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : projectProgressData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={480}>
+                <BarChart data={projectProgressData} margin={{ bottom: 100, top: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="name" 
+                    angle={-90} 
+                    textAnchor="end" 
+                    height={100}
+                    tick={<CustomXAxisTick />}
+                  />
+                  <YAxis domain={[0, 100]} />
+                  <Tooltip />
+                  <Bar dataKey="previsto" fill="#3b82f6" name="Previsto">
+                    <LabelList 
+                      dataKey="previsto" 
+                      position="top" 
+                      formatter={(value: number) => `${value}%`}
+                      style={{ fontSize: '12px', fill: '#374151' }}
+                    />
+                  </Bar>
+                  <Bar dataKey="realizado" fill="#10b981" name="Realizado">
+                    <LabelList 
+                      dataKey="realizado" 
+                      position="top" 
+                      formatter={(value: number) => `${value}%`}
+                      style={{ fontSize: '12px', fill: '#374151' }}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-muted-foreground">
+                Nenhum dado disponível
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
