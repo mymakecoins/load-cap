@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
-import { eq, and, or, desc, ne, isNull, asc } from "drizzle-orm";
+import { eq, and, or, desc, ne, isNull, asc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, clients, employees, projects, allocations, allocationHistory, projectLogEntries, systemSettings, Client, Employee, Project, Allocation, AllocationHistory, SystemSetting } from "../drizzle/schema";
+import { InsertUser, users, clients, employees, projects, allocations, allocationHistory, projectLogEntries, systemSettings, notifications, notificationPreferences, Client, Employee, Project, Allocation, AllocationHistory, SystemSetting, Notification, NotificationPreference, InsertNotification, InsertNotificationPreference } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -266,6 +266,19 @@ export async function getAllocationHistory(employeeId?: number, projectId?: numb
   }
   
   return db.select().from(allocationHistory).orderBy(desc(allocationHistory.createdAt));
+}
+
+export async function getAllocationHistoryById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db
+    .select()
+    .from(allocationHistory)
+    .where(eq(allocationHistory.id, id))
+    .limit(1);
+  
+  return result[0] || null;
 }
 
 
@@ -590,6 +603,71 @@ export async function getActiveProjects() {
   return result;
 }
 
+export async function getActiveProjectsWithEntryCount() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db
+    .select({
+      id: projects.id,
+      name: projects.name,
+      clientId: projects.clientId,
+      type: projects.type,
+      managerId: projects.managerId,
+      startDate: projects.startDate,
+      plannedEndDate: projects.plannedEndDate,
+      actualEndDate: projects.actualEndDate,
+      plannedProgress: projects.plannedProgress,
+      actualProgress: projects.actualProgress,
+      status: projects.status,
+      isDeleted: projects.isDeleted,
+      createdAt: projects.createdAt,
+      updatedAt: projects.updatedAt,
+      entryCount: sql<number>`coalesce(count(${projectLogEntries.id}), 0)`.as('entryCount'),
+    })
+    .from(projects)
+    .leftJoin(projectLogEntries, eq(projects.id, projectLogEntries.projectId))
+    .where(eq(projects.isDeleted, false))
+    .groupBy(projects.id)
+    .orderBy(asc(projects.name));
+  
+  return result;
+}
+
+export async function getProjectsByManagerIdWithEntryCount(managerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const result = await db
+    .select({
+      id: projects.id,
+      name: projects.name,
+      clientId: projects.clientId,
+      type: projects.type,
+      managerId: projects.managerId,
+      startDate: projects.startDate,
+      plannedEndDate: projects.plannedEndDate,
+      actualEndDate: projects.actualEndDate,
+      plannedProgress: projects.plannedProgress,
+      actualProgress: projects.actualProgress,
+      status: projects.status,
+      isDeleted: projects.isDeleted,
+      createdAt: projects.createdAt,
+      updatedAt: projects.updatedAt,
+      entryCount: sql<number>`coalesce(count(${projectLogEntries.id}), 0)`.as('entryCount'),
+    })
+    .from(projects)
+    .leftJoin(projectLogEntries, eq(projects.id, projectLogEntries.projectId))
+    .where(and(
+      eq(projects.managerId, managerId),
+      eq(projects.isDeleted, false)
+    ))
+    .groupBy(projects.id)
+    .orderBy(asc(projects.name));
+  
+  return result;
+}
+
 // ===== SYSTEM SETTINGS QUERIES =====
 export async function getSystemSetting(key: string): Promise<SystemSetting | undefined> {
   const db = await getDb();
@@ -650,5 +728,125 @@ export async function getAllocationMode(): Promise<"hours" | "percentage"> {
   }
   // Padrão: horas
   return "hours";
+}
+
+// ===== NOTIFICATION QUERIES =====
+export async function createNotification(data: InsertNotification) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Verificar preferências do usuário
+  const prefs = await db
+    .select()
+    .from(notificationPreferences)
+    .where(eq(notificationPreferences.userId, data.userId))
+    .limit(1);
+  
+  const preference = prefs[0];
+  
+  // Se não houver preferências, criar com padrões
+  if (!preference) {
+    // Usuário recebe notificações por padrão
+  } else {
+    // Verificar se usuário quer receber este tipo de notificação
+    const typeKey = data.type.replace("allocation_", "") as 
+      "created" | "updated" | "deleted" | "reverted";
+    
+    const preferenceKey = `allocation${typeKey.charAt(0).toUpperCase() + typeKey.slice(1)}` as
+      "allocationCreated" | "allocationUpdated" | "allocationDeleted" | "allocationReverted";
+    
+    if (!preference[preferenceKey]) {
+      return null; // Usuário desativou este tipo de notificação
+    }
+  }
+  
+  return db.insert(notifications).values(data);
+}
+
+export async function getNotificationsByUserId(userId: number, limit: number = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.userId, userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit);
+}
+
+export async function getUnreadNotificationCount(userId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(notifications)
+    .where(and(
+      eq(notifications.userId, userId),
+      eq(notifications.isRead, false)
+    ));
+  
+  return result[0]?.count || 0;
+}
+
+export async function markNotificationAsRead(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return db
+    .update(notifications)
+    .set({ isRead: true, readAt: new Date() })
+    .where(and(
+      eq(notifications.id, id),
+      eq(notifications.userId, userId)
+    ));
+}
+
+export async function deleteNotification(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return db
+    .delete(notifications)
+    .where(and(
+      eq(notifications.id, id),
+      eq(notifications.userId, userId)
+    ));
+}
+
+export async function getNotificationPreferences(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db
+    .select()
+    .from(notificationPreferences)
+    .where(eq(notificationPreferences.userId, userId))
+    .limit(1);
+  
+  return result[0] || null;
+}
+
+export async function updateNotificationPreferences(
+  userId: number,
+  preferences: Partial<Omit<NotificationPreference, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const existing = await getNotificationPreferences(userId);
+  
+  if (existing) {
+    return db
+      .update(notificationPreferences)
+      .set(preferences)
+      .where(eq(notificationPreferences.userId, userId));
+  } else {
+    return db.insert(notificationPreferences).values({
+      userId,
+      ...preferences,
+    });
+  }
 }
 

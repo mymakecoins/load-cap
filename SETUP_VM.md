@@ -139,18 +139,16 @@ Crie um arquivo `.env.local` com as seguintes variáveis:
 # Banco de Dados
 DATABASE_URL=mysql://root:root@localhost:3306/team_management
 
-# Autenticação OAuth (Manus)
+# Autenticação JWT
 VITE_APP_ID=seu_app_id_aqui
-OAUTH_SERVER_URL=https://api.manus.im
-VITE_OAUTH_PORTAL_URL=https://portal.manus.im
 JWT_SECRET=sua_chave_secreta_aqui
 
-# Informações do Proprietário
+# Informações do Proprietário (opcional - usado para definir usuário admin por openId)
 OWNER_OPEN_ID=seu_open_id
 OWNER_NAME=Seu Nome
 
-# APIs Internas (Manus)
-BUILT_IN_FORGE_API_URL=https://api.manus.im
+# APIs Internas
+BUILT_IN_FORGE_API_URL=https://api.forge.example.com
 BUILT_IN_FORGE_API_KEY=sua_chave_api
 
 # Título e Logo da Aplicação
@@ -217,13 +215,11 @@ load-cap/
 
 ## 🔐 Variáveis de Ambiente para Desenvolvimento
 
-Para desenvolvimento local sem OAuth real, você pode usar valores fictícios:
+Para desenvolvimento local, você pode usar valores fictícios:
 
 ```env
 DATABASE_URL=mysql://root:root@localhost:3306/team_management
 VITE_APP_ID=dev-app-id
-OAUTH_SERVER_URL=http://localhost:3001
-VITE_OAUTH_PORTAL_URL=http://localhost:3001
 JWT_SECRET=dev-secret-key-change-in-production
 OWNER_OPEN_ID=dev-owner-id
 OWNER_NAME=Developer

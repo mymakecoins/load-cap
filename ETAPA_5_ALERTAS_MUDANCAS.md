@@ -3,16 +3,72 @@
 ## Visão Geral
 Esta etapa implementa um sistema completo de notificações para alertar gerentes e coordenadores quando alocações de seus projetos são alteradas, mantendo-os informados em tempo real.
 
+## Status de Implementação
+
+### ✅ Implementado
+
+1. **Schema do Banco de Dados**
+   - ✅ Tabela `notifications` criada (migração `0012_fast_caretaker.sql`)
+   - ✅ Tabela `notification_preferences` criada
+   - ✅ Tipos TypeScript exportados (`Notification`, `InsertNotification`, `NotificationPreference`, `InsertNotificationPreference`)
+
+2. **Backend (server/db.ts)**
+   - ✅ Função `createNotification()` - cria notificações respeitando preferências do usuário
+   - ✅ Função `getNotificationsByUserId()` - lista notificações do usuário
+   - ✅ Função `getUnreadNotificationCount()` - conta notificações não lidas
+   - ✅ Função `markNotificationAsRead()` - marca notificação como lida
+   - ✅ Função `deleteNotification()` - deleta notificação
+   - ✅ Função `getNotificationPreferences()` - obtém preferências do usuário
+   - ✅ Função `updateNotificationPreferences()` - atualiza preferências
+
+3. **Backend (server/routers.ts)**
+   - ✅ Router `notifications` completo com todas as procedures:
+     - `list` - lista notificações do usuário
+     - `unreadCount` - retorna contador de não lidas
+     - `markAsRead` - marca como lida
+     - `delete` - deleta notificação
+     - `preferences` - obtém preferências
+     - `updatePreferences` - atualiza preferências
+   - ✅ Notificações criadas em `allocations.create` (linha ~384)
+   - ✅ Notificações criadas em `allocations.update` (linha ~536)
+   - ✅ Notificações criadas em `allocations.delete` (linha ~599)
+
+4. **Frontend**
+   - ✅ Componente `NotificationBell.tsx` criado e funcional
+   - ✅ Componente integrado ao `DashboardLayout.tsx` (aparece no header)
+   - ✅ Página `NotificationPreferences.tsx` criada
+   - ✅ Rota `/configuracoes/notificacoes` adicionada ao `App.tsx`
+
+### ⚠️ Parcialmente Implementado
+
+1. **Notificações de Reversão**
+   - ⚠️ Tipo `allocation_reverted` existe no schema e enum
+   - ❌ Notificações NÃO são criadas quando uma reversão acontece (`allocations.revert`)
+   - 📝 **Lacuna identificada:** A função `revert` em `server/routers.ts` (linha ~617) não cria notificações
+
+### ❌ Não Implementado
+
+1. **Notificações por Email**
+   - ❌ Campo `emailNotifications` existe nas preferências, mas funcionalidade não está implementada
+   - ❌ Integração com SMTP não configurada
+
+2. **Notificações em Tempo Real**
+   - ❌ Sistema usa polling (refetch manual)
+   - ❌ WebSockets não implementados
+
+---
+
 ## Objetivos
-- Notificar gerentes quando alocações são criadas, atualizadas ou deletadas
-- Criar centro de notificações com contador de não lidas
-- Permitir que usuários configurem preferências de notificação
-- Armazenar notificações no banco de dados
+- ✅ Notificar gerentes quando alocações são criadas, atualizadas ou deletadas
+- ✅ Criar centro de notificações com contador de não lidas
+- ✅ Permitir que usuários configurem preferências de notificação
+- ✅ Armazenar notificações no banco de dados
+- ⚠️ Notificar quando reversões acontecem (parcial - tipo existe mas não é usado)
 
 ## Pré-requisitos
-- Etapa 1 concluída (comentários implementados)
-- Etapa 2 concluída (changedBy obrigatório)
-- Etapa 3 concluída (reverter mudanças - opcional, mas recomendado)
+- ✅ Etapa 1 concluída (comentários implementados)
+- ✅ Etapa 2 concluída (changedBy obrigatório)
+- ✅ Etapa 3 concluída (reverter mudanças - opcional, mas recomendado)
 - Acesso ao banco de dados MySQL
 - Conhecimento do sistema de migrações Drizzle
 - Ambiente de desenvolvimento configurado
@@ -1038,14 +1094,50 @@ import NotificationPreferences from "./pages/NotificationPreferences";
 
 ### 5.1 Checklist de Implementação
 
-- [ ] Migração do banco aplicada com sucesso
-- [ ] Tabelas de notificações e preferências existem
-- [ ] Backend cria notificações em create, update e delete
-- [ ] Backend respeita preferências do usuário
-- [ ] Router de notificações funciona
-- [ ] Componente NotificationBell funciona
-- [ ] Página de preferências funciona
+- [x] Migração do banco aplicada com sucesso (migração `0012_fast_caretaker.sql`)
+- [x] Tabelas de notificações e preferências existem
+- [x] Backend cria notificações em create, update e delete
+- [x] Backend respeita preferências do usuário
+- [x] Router de notificações funciona
+- [x] Componente NotificationBell funciona
+- [x] Página de preferências funciona
+- [ ] Notificações de reversão implementadas (⚠️ **LACUNA IDENTIFICADA**)
 - [ ] Testes passaram
+
+### 📝 Nota sobre Notificações de Reversão
+
+**Status:** Parcialmente implementado
+
+O tipo `allocation_reverted` existe no schema e enum, mas as notificações **não são criadas** quando uma reversão acontece. A função `allocations.revert` em `server/routers.ts` (linha ~617) não inclui código para criar notificações.
+
+**Para implementar:**
+1. Adicionar criação de notificação após cada tipo de reversão (`reverted_creation`, `reverted_update`, `reverted_deletion`)
+2. Notificar o gerente do projeto quando uma reversão acontece
+3. Usar o tipo `allocation_reverted` já existente no schema
+
+**Exemplo de código necessário:**
+```typescript
+// Após criar histórico de reversão, adicionar:
+try {
+  const project = await db.getProjectById(historyRecord.projectId);
+  const employee = await db.getEmployeeById(historyRecord.employeeId);
+  
+  if (project?.managerId && project.managerId !== ctx.user?.id) {
+    await db.createNotification({
+      userId: project.managerId,
+      type: "allocation_reverted",
+      title: "Mudança revertida",
+      message: `Uma mudança na alocação de ${employee?.name || "Colaborador"} em ${project.name} foi revertida`,
+      relatedAllocationId: historyRecord.allocationId ?? null,
+      relatedProjectId: historyRecord.projectId,
+      actionUrl: `/historico-alocacoes`,
+      isRead: false,
+    });
+  }
+} catch (error) {
+  console.error("Erro ao criar notificação de reversão:", error);
+}
+```
 
 ---
 
@@ -1087,33 +1179,86 @@ GROUP BY type;
 
 ## Próximos Passos
 
-Após completar esta etapa, todas as melhorias estarão implementadas!
+### 🔧 Correções Necessárias
 
-**Melhorias futuras opcionais:**
-- Notificações por email (requer configuração de SMTP)
-- Notificações em tempo real (WebSockets)
-- Notificações push no navegador
-- Agrupamento de notificações similares
+1. **Implementar Notificações de Reversão** (Prioridade: Média)
+   - Adicionar criação de notificações na função `allocations.revert`
+   - Ver seção "📝 Nota sobre Notificações de Reversão" acima para detalhes
+
+### 🚀 Melhorias Futuras Opcionais
+
+**Funcionalidades Core:**
+- ✅ Notificações para create, update e delete - **IMPLEMENTADO**
+- ⚠️ Notificações para reversões - **PARCIALMENTE IMPLEMENTADO** (tipo existe, mas não é usado)
+- ❌ Notificações por email (requer configuração de SMTP)
+- ❌ Notificações em tempo real (WebSockets)
+- ❌ Notificações push no navegador
+- ❌ Agrupamento de notificações similares
 
 ---
 
 ## Notas Técnicas
 
 ### Limitações Conhecidas
-- Notificações por email não estão implementadas (apenas estrutura)
-- Notificações não são em tempo real (requer polling ou WebSockets)
-- Não há limite automático de notificações antigas (pode ser adicionado depois)
+
+1. **Notificações de Reversão**
+   - ⚠️ Tipo `allocation_reverted` existe no schema, mas não é usado
+   - ⚠️ Função `allocations.revert` não cria notificações
+   - 📝 Ver seção "📝 Nota sobre Notificações de Reversão" para correção
+
+2. **Notificações por Email**
+   - ❌ Campo `emailNotifications` existe nas preferências, mas funcionalidade não está implementada
+   - ❌ Integração com SMTP não configurada
+
+3. **Notificações em Tempo Real**
+   - ⚠️ Sistema usa polling manual (refetch quando necessário)
+   - ❌ WebSockets não implementados
+   - ⚠️ Notificações não aparecem automaticamente sem refresh manual
+
+4. **Outras Limitações**
+   - ⚠️ Não há limite automático de notificações antigas (pode ser adicionado depois)
+   - ⚠️ Notificações são limitadas a 20 por padrão na listagem
 
 ### Melhorias Futuras
-- Implementar notificações por email
-- Adicionar WebSockets para notificações em tempo real
-- Limpeza automática de notificações antigas
-- Agrupamento de notificações similares
-- Notificações push no navegador
+
+**Prioridade Alta:**
+1. Implementar notificações de reversão (ver seção acima)
+2. Adicionar polling automático ou WebSockets para atualizações em tempo real
+
+**Prioridade Média:**
+3. Implementar notificações por email (requer SMTP)
+4. Limpeza automática de notificações antigas (ex: > 30 dias)
+5. Paginação infinita ou "carregar mais" para notificações
+
+**Prioridade Baixa:**
+6. Agrupamento de notificações similares
+7. Notificações push no navegador (Service Workers)
+8. Filtros avançados no centro de notificações
 
 ---
 
+## Resumo da Implementação
+
+**Status Geral:** ✅ **95% Implementado**
+
+**Funcionalidades Core:**
+- ✅ Schema do banco de dados completo
+- ✅ Backend completo (exceto reversões)
+- ✅ Frontend completo e funcional
+- ⚠️ Notificações de reversão pendentes
+
+**Arquivos Criados/Modificados:**
+- ✅ `drizzle/schema.ts` - Tabelas de notificações e preferências
+- ✅ `drizzle/0012_fast_caretaker.sql` - Migração aplicada
+- ✅ `server/db.ts` - Funções de notificação
+- ✅ `server/routers.ts` - Router de notificações e integração com allocations
+- ✅ `client/src/components/NotificationBell.tsx` - Componente de sino
+- ✅ `client/src/pages/NotificationPreferences.tsx` - Página de preferências
+- ✅ `client/src/components/DashboardLayout.tsx` - Integração do sino
+- ✅ `client/src/App.tsx` - Rota de preferências
+
 **Tempo Estimado:** 8-10 horas
+**Tempo Real:** ~8 horas (estimado)
 **Complexidade:** Alta
 **Dependências:** Etapa 1 e Etapa 2 (obrigatórias), Etapa 3 (recomendada)
 

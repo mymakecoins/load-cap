@@ -339,7 +339,7 @@ export const appRouter = router({
           );
         }
         
-        const allocation = await db.createAllocation({
+        const allocationResult = await db.createAllocation({
           employeeId: input.employeeId,
           projectId: input.projectId,
           allocatedHours,
@@ -348,6 +348,9 @@ export const appRouter = router({
           endDate: input.endDate ?? null,
           isActive: true,
         });
+        
+        // Obter ID da alocação criada
+        const allocationId = (allocationResult as any).insertId || (allocationResult as any)[0]?.insertId;
         
         // Validação: usuário deve estar autenticado
         if (!ctx.user?.id) {
@@ -359,7 +362,7 @@ export const appRouter = router({
         
         // Log to history
         await db.createAllocationHistory({
-          allocationId: null,
+          allocationId: allocationId || null,
           employeeId: input.employeeId,
           projectId: input.projectId,
           allocatedHours,
@@ -371,7 +374,32 @@ export const appRouter = router({
           comment: input.comment ?? null,
         });
         
-        return allocation;
+        // Criar notificação para gerente do projeto
+        try {
+          const project = await db.getProjectById(input.projectId);
+          const employee = await db.getEmployeeById(input.employeeId);
+          
+          if (project?.managerId && project.managerId !== ctx.user?.id) {
+            // Não notificar se o gerente é quem criou
+            await db.createNotification({
+              userId: project.managerId,
+              type: "allocation_created",
+              title: "Novo colaborador alocado",
+              message: `${employee?.name || "Colaborador"} foi alocado(a) para ${project.name} com ${allocatedHours}h${allocatedPercentage ? ` (${allocatedPercentage.toFixed(2)}%)` : ""}`,
+              relatedAllocationId: allocationId || null,
+              relatedProjectId: input.projectId,
+              actionUrl: `/alocacoes`,
+              isRead: false,
+            });
+          }
+        } catch (error) {
+          // Não falhar criação se notificação falhar
+          console.error("Erro ao criar notificação:", error);
+        }
+        
+        // Buscar alocação criada para retornar
+        const allocation = allocationId ? await db.getAllocationById(allocationId) : null;
+        return allocation || allocationResult;
       }),
     
     update: protectedProcedure
@@ -469,7 +497,7 @@ export const appRouter = router({
           });
         }
         
-        // Log to history
+        // Log to history COM SNAPSHOT de valores anteriores
         await db.createAllocationHistory({
           allocationId: input.id,
           employeeId: allocation.employeeId,
@@ -481,7 +509,44 @@ export const appRouter = router({
           action: "updated",
           changedBy: ctx.user.id, // MODIFICADO: não usa ?? null, já validado acima
           comment: input.comment ?? null,
+          // Snapshot de valores anteriores para permitir reversão
+          previousAllocatedHours: allocation.allocatedHours,
+          previousAllocatedPercentage: allocation.allocatedPercentage,
+          previousEndDate: allocation.endDate ?? null,
         });
+        
+        // Criar notificação para gerente do projeto
+        try {
+          const project = await db.getProjectById(allocation.projectId);
+          const employee = await db.getEmployeeById(allocation.employeeId);
+          
+          if (project?.managerId && project.managerId !== ctx.user?.id) {
+            // Construir mensagem de mudança
+            let changeMessage = "";
+            if (input.allocatedHours !== undefined && allocation.allocatedHours !== allocatedHours) {
+              changeMessage = `${allocation.allocatedHours}h → ${allocatedHours}h`;
+            } else if (input.allocatedPercentage !== undefined && allocation.allocatedPercentage !== String(allocatedPercentage)) {
+              changeMessage = `${allocation.allocatedPercentage}% → ${allocatedPercentage?.toFixed(2)}%`;
+            } else if (input.endDate !== undefined) {
+              changeMessage = `Data fim alterada para ${input.endDate.toLocaleDateString('pt-BR')}`;
+            } else {
+              changeMessage = "Alocação atualizada";
+            }
+            
+            await db.createNotification({
+              userId: project.managerId,
+              type: "allocation_updated",
+              title: "Alocação alterada",
+              message: `Alocação de ${employee?.name || "Colaborador"} em ${project.name} foi alterada: ${changeMessage}`,
+              relatedAllocationId: input.id,
+              relatedProjectId: allocation.projectId,
+              actionUrl: `/alocacoes`,
+              isRead: false,
+            });
+          }
+        } catch (error) {
+          console.error("Erro ao criar notificação:", error);
+        }
         
         return result;
       }),
@@ -525,7 +590,185 @@ export const appRouter = router({
           comment: input.comment ?? null,
         });
         
+        // Criar notificação para gerente do projeto
+        try {
+          const project = await db.getProjectById(allocation.projectId);
+          const employee = await db.getEmployeeById(allocation.employeeId);
+          
+          if (project?.managerId && project.managerId !== ctx.user?.id) {
+            await db.createNotification({
+              userId: project.managerId,
+              type: "allocation_deleted",
+              title: "Alocação removida",
+              message: `Alocação de ${employee?.name || "Colaborador"} em ${project.name} (${allocation.allocatedHours}h) foi removida`,
+              relatedAllocationId: input.id,
+              relatedProjectId: allocation.projectId,
+              actionUrl: `/historico-alocacoes`,
+              isRead: false,
+            });
+          }
+        } catch (error) {
+          console.error("Erro ao criar notificação:", error);
+        }
+        
         return result;
+      }),
+    
+    revert: protectedProcedure
+      .input(z.object({
+        historyId: z.number(),
+        comment: z.string().max(500).optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        // Verificar permissão
+        if (!isCoordinator(ctx.user?.role || "")) {
+          throw new TRPCError({ 
+            code: "FORBIDDEN", 
+            message: "Apenas coordenadores podem reverter mudanças" 
+          });
+        }
+        
+        // Verificar autenticação
+        if (!ctx.user?.id) {
+          throw new TRPCError({ 
+            code: "UNAUTHORIZED", 
+            message: "Usuário não autenticado" 
+          });
+        }
+        
+        // Obter registro de histórico
+        const historyRecord = await db.getAllocationHistoryById(input.historyId);
+        if (!historyRecord) {
+          throw new TRPCError({ 
+            code: "NOT_FOUND", 
+            message: "Registro de histórico não encontrado" 
+          });
+        }
+        
+        // Verificar se já foi revertido
+        const allHistory = await db.getAllocationHistory();
+        const isReverted = allHistory.some(
+          (h: any) => h.revertedHistoryId === input.historyId
+        );
+        if (isReverted) {
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: "Esta mudança já foi revertida" 
+          });
+        }
+        
+        let result;
+        
+        if (historyRecord.action === "created") {
+          // Reverter criação = deletar alocação
+          if (historyRecord.allocationId) {
+            await db.deleteAllocation(historyRecord.allocationId);
+          }
+          
+          result = await db.createAllocationHistory({
+            allocationId: historyRecord.allocationId ?? null,
+            employeeId: historyRecord.employeeId,
+            projectId: historyRecord.projectId,
+            allocatedHours: historyRecord.allocatedHours,
+            allocatedPercentage: historyRecord.allocatedPercentage,
+            startDate: historyRecord.startDate,
+            endDate: historyRecord.endDate ?? null,
+            action: "reverted_creation",
+            changedBy: ctx.user.id,
+            comment: input.comment || `Revertido: Alocação criada em ${new Date(historyRecord.createdAt).toLocaleString('pt-BR')}`,
+            revertedHistoryId: input.historyId,
+          });
+          
+        } else if (historyRecord.action === "updated") {
+          // Reverter atualização = restaurar valores anteriores
+          if (!historyRecord.allocationId) {
+            throw new TRPCError({ 
+              code: "BAD_REQUEST", 
+              message: "Não é possível reverter atualização: alocação não encontrada" 
+            });
+          }
+          
+          // Restaurar valores anteriores
+          const restoreData: any = {};
+          if (historyRecord.previousAllocatedHours !== null && historyRecord.previousAllocatedHours !== undefined) {
+            restoreData.allocatedHours = historyRecord.previousAllocatedHours;
+          }
+          if (historyRecord.previousAllocatedPercentage !== null && historyRecord.previousAllocatedPercentage !== undefined) {
+            restoreData.allocatedPercentage = String(historyRecord.previousAllocatedPercentage);
+          }
+          if (historyRecord.previousEndDate !== null && historyRecord.previousEndDate !== undefined) {
+            restoreData.endDate = historyRecord.previousEndDate;
+          }
+          
+          await db.updateAllocation(historyRecord.allocationId, restoreData);
+          
+          // Obter alocação atualizada para histórico
+          const updatedAllocation = await db.getAllocationById(historyRecord.allocationId);
+          
+          result = await db.createAllocationHistory({
+            allocationId: historyRecord.allocationId,
+            employeeId: historyRecord.employeeId,
+            projectId: historyRecord.projectId,
+            allocatedHours: updatedAllocation?.allocatedHours || historyRecord.previousAllocatedHours || 0,
+            allocatedPercentage: updatedAllocation?.allocatedPercentage || historyRecord.previousAllocatedPercentage,
+            startDate: historyRecord.startDate,
+            endDate: updatedAllocation?.endDate ?? historyRecord.previousEndDate ?? null,
+            action: "reverted_update",
+            changedBy: ctx.user.id,
+            comment: input.comment || `Revertido: Atualização de ${historyRecord.previousAllocatedHours}h para ${historyRecord.allocatedHours}h`,
+            revertedHistoryId: input.historyId,
+          });
+          
+        } else if (historyRecord.action === "deleted") {
+          // Reverter deleção = restaurar alocação
+          const insertResult = await db.createAllocation({
+            employeeId: historyRecord.employeeId,
+            projectId: historyRecord.projectId,
+            allocatedHours: historyRecord.allocatedHours,
+            allocatedPercentage: historyRecord.allocatedPercentage,
+            startDate: historyRecord.startDate,
+            endDate: historyRecord.endDate ?? null,
+            isActive: true,
+          });
+          
+          // Obter o ID da alocação criada
+          // No MySQL, o resultado do insert contém insertId
+          const insertId = (insertResult as any).insertId || (insertResult as any)[0]?.insertId;
+          let restoredAllocationId = insertId;
+          
+          // Se não conseguir o insertId, buscar a alocação mais recente para este colaborador/projeto
+          if (!restoredAllocationId) {
+            const recentAllocations = await db.getAllocationsByEmployee(historyRecord.employeeId);
+            const matchingAllocation = recentAllocations.find(
+              (a: any) => 
+                a.projectId === historyRecord.projectId &&
+                a.allocatedHours === historyRecord.allocatedHours &&
+                Math.abs(new Date(a.startDate).getTime() - new Date(historyRecord.startDate).getTime()) < 1000
+            );
+            restoredAllocationId = matchingAllocation?.id;
+          }
+          
+          result = await db.createAllocationHistory({
+            allocationId: restoredAllocationId ?? null,
+            employeeId: historyRecord.employeeId,
+            projectId: historyRecord.projectId,
+            allocatedHours: historyRecord.allocatedHours,
+            allocatedPercentage: historyRecord.allocatedPercentage,
+            startDate: historyRecord.startDate,
+            endDate: historyRecord.endDate ?? null,
+            action: "reverted_deletion",
+            changedBy: ctx.user.id,
+            comment: input.comment || `Revertido: Alocação deletada em ${new Date(historyRecord.createdAt).toLocaleString('pt-BR')}`,
+            revertedHistoryId: input.historyId,
+          });
+        } else {
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: "Não é possível reverter este tipo de ação" 
+          });
+        }
+        
+        return { success: true, message: "Mudança revertida com sucesso" };
       }),
     
     getHistory: protectedProcedure
@@ -558,6 +801,79 @@ export const appRouter = router({
         );
         
         return enrichedHistory;
+      }),
+  }),
+
+  // ===== NOTIFICATIONS ROUTER =====
+  notifications: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      if (!ctx.user?.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+      
+      return db.getNotificationsByUserId(ctx.user.id, 20);
+    }),
+    
+    unreadCount: protectedProcedure.query(async ({ ctx }) => {
+      if (!ctx.user?.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+      
+      return { count: await db.getUnreadNotificationCount(ctx.user.id) };
+    }),
+    
+    markAsRead: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user?.id) {
+          throw new TRPCError({ code: "UNAUTHORIZED" });
+        }
+        
+        return db.markNotificationAsRead(input.id, ctx.user.id);
+      }),
+    
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user?.id) {
+          throw new TRPCError({ code: "UNAUTHORIZED" });
+        }
+        
+        return db.deleteNotification(input.id, ctx.user.id);
+      }),
+    
+    preferences: protectedProcedure.query(async ({ ctx }) => {
+      if (!ctx.user?.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+      
+      const prefs = await db.getNotificationPreferences(ctx.user.id);
+      
+      // Retornar padrões se não houver preferências
+      return prefs || {
+        userId: ctx.user.id,
+        allocationCreated: true,
+        allocationUpdated: true,
+        allocationDeleted: true,
+        allocationReverted: true,
+        emailNotifications: false,
+      };
+    }),
+    
+    updatePreferences: protectedProcedure
+      .input(z.object({
+        allocationCreated: z.boolean().optional(),
+        allocationUpdated: z.boolean().optional(),
+        allocationDeleted: z.boolean().optional(),
+        allocationReverted: z.boolean().optional(),
+        emailNotifications: z.boolean().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user?.id) {
+          throw new TRPCError({ code: "UNAUTHORIZED" });
+        }
+        
+        return db.updateNotificationPreferences(ctx.user.id, input);
       }),
   }),
 
@@ -615,12 +931,12 @@ export const appRouter = router({
       
       // Admin and coordinator see all active projects
       if (isCoordinator(userRole)) {
-        return db.getActiveProjects();
+        return db.getActiveProjectsWithEntryCount();
       }
       
       // Managers see only their projects
       if (isManager(userRole)) {
-        return db.getProjectsByManagerId(ctx.user!.id);
+        return db.getProjectsByManagerIdWithEntryCount(ctx.user!.id);
       }
       
       // Other roles see no projects

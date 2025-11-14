@@ -122,9 +122,20 @@ export const allocationHistory = mysqlTable("allocation_history", {
   allocatedPercentage: decimal("allocatedPercentage", { precision: 5, scale: 2 }), // Percentual de alocação (0-100)
   startDate: timestamp("startDate").notNull(),
   endDate: timestamp("endDate"),
-  action: mysqlEnum("action", ["created", "updated", "deleted"]).notNull(),
+  action: mysqlEnum("action", [
+    "created",
+    "updated",
+    "deleted",
+    "reverted_creation",
+    "reverted_update",
+    "reverted_deletion",
+  ]).notNull(),
   changedBy: int("changedBy").notNull(), // MODIFICADO: agora obrigatório
   comment: text("comment"), // Comentário opcional sobre a mudança
+  previousAllocatedHours: int("previousAllocatedHours"), // Para reverter updates
+  previousAllocatedPercentage: decimal("previousAllocatedPercentage", { precision: 5, scale: 2 }), // Para reverter updates
+  previousEndDate: timestamp("previousEndDate"), // Para reverter updates
+  revertedHistoryId: int("revertedHistoryId"), // Referência ao histórico revertido
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -162,6 +173,49 @@ export const systemSettings = mysqlTable("system_settings", {
 
 export type SystemSetting = typeof systemSettings.$inferSelect;
 export type InsertSystemSetting = typeof systemSettings.$inferInsert;
+
+/**
+ * Notifications table - stores user notifications
+ */
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", [
+    "allocation_created",
+    "allocation_updated",
+    "allocation_deleted",
+    "allocation_reverted",
+  ]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  relatedAllocationId: int("relatedAllocationId"),
+  relatedProjectId: int("relatedProjectId"),
+  isRead: boolean("isRead").default(false).notNull(),
+  actionUrl: varchar("actionUrl", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  readAt: timestamp("readAt"),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+
+/**
+ * Notification preferences table - stores user notification preferences
+ */
+export const notificationPreferences = mysqlTable("notification_preferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  allocationCreated: boolean("allocationCreated").default(true).notNull(),
+  allocationUpdated: boolean("allocationUpdated").default(true).notNull(),
+  allocationDeleted: boolean("allocationDeleted").default(true).notNull(),
+  allocationReverted: boolean("allocationReverted").default(true).notNull(),
+  emailNotifications: boolean("emailNotifications").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type NotificationPreference = typeof notificationPreferences.$inferSelect;
+export type InsertNotificationPreference = typeof notificationPreferences.$inferInsert;
 
 /**
  * Relations

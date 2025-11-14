@@ -1,7 +1,9 @@
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { trpc } from "@/lib/trpc";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Label } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Label, LabelList } from "recharts";
 
 const COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"];
 
@@ -19,7 +21,10 @@ const CustomTooltip = (props: any) => {
   return null;
 };
 
+type PeriodFilter = "total" | "30dias" | "7dias";
+
 export default function Dashboard() {
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("total");
   const { data: allocations, isLoading: allocLoading } = trpc.allocations.list.useQuery();
   const { data: employees, isLoading: empLoading } = trpc.employees.list.useQuery();
   const { data: projects, isLoading: projLoading } = trpc.projects.list.useQuery();
@@ -65,14 +70,38 @@ export default function Dashboard() {
     };
   });
 
-  // Distribuição por projeto baseado no modo configurado
-  const allocationByProject = allocations?.reduce((acc: Record<number, number>, alloc) => {
+  // Filtrar alocações baseado no período selecionado
+  const filteredAllocations = useMemo(() => {
+    if (!allocations) return [];
+    
+    if (periodFilter === "total") {
+      return allocations;
+    }
+
+    const now = new Date();
+    const daysBack = periodFilter === "30dias" ? 30 : 7;
+    const periodStart = new Date(now);
+    periodStart.setDate(periodStart.getDate() - daysBack);
+    periodStart.setHours(0, 0, 0, 0);
+
+    return allocations.filter((alloc) => {
+      const allocStartDate = alloc.startDate ? new Date(alloc.startDate) : null;
+      
+      // Considera apenas alocações que começaram nos últimos X dias
+      if (!allocStartDate) return false;
+      
+      return allocStartDate >= periodStart && allocStartDate <= now;
+    });
+  }, [allocations, periodFilter]);
+
+  // Distribuição por projeto baseado no modo configurado e filtro de período
+  const allocationByProject = filteredAllocations.reduce((acc: Record<number, number>, alloc) => {
     const value = allocationMode === "percentage"
       ? (alloc.allocatedPercentage ? parseFloat(String(alloc.allocatedPercentage)) : 0)
       : alloc.allocatedHours;
     acc[alloc.projectId] = (acc[alloc.projectId] || 0) + value;
     return acc;
-  }, {}) || {};
+  }, {});
 
   const projectData = projects?.map((proj) => ({
     name: proj.name,
@@ -192,24 +221,58 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="md:col-span-3">
           <CardHeader>
-            <CardTitle>Alocação por Projeto</CardTitle>
-            <CardDescription>
-              {allocationMode === "percentage" 
-                ? "Percentual alocado em cada projeto" 
-                : "Horas alocadas em cada projeto"}
-            </CardDescription>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle>Alocação por Projeto</CardTitle>
+                <CardDescription>
+                  {allocationMode === "percentage" 
+                    ? "Percentual alocado em cada projeto" 
+                    : "Horas alocadas em cada projeto"}
+                </CardDescription>
+              </div>
+              <ToggleGroup
+                type="single"
+                value={periodFilter}
+                onValueChange={(value) => {
+                  if (value) setPeriodFilter(value as PeriodFilter);
+                }}
+                variant="outline"
+              >
+                <ToggleGroupItem value="total" aria-label="Total">
+                  Total
+                </ToggleGroupItem>
+                <ToggleGroupItem value="30dias" aria-label="30 Dias">
+                  30 Dias
+                </ToggleGroupItem>
+                <ToggleGroupItem value="7dias" aria-label="7 Dias">
+                  7 Dias
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-64 w-full" />
             ) : projectData.length > 0 ? (
               <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={projectData} margin={{ bottom: 100 }}>
+                <BarChart data={projectData} margin={{ bottom: 100, top: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" angle={-90} textAnchor="end" height={100} />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="hours" fill="#3b82f6" />
+                  <Bar dataKey="hours" fill="#3b82f6">
+                    <LabelList 
+                      dataKey="hours" 
+                      position="top" 
+                      formatter={(value: number) => {
+                        if (allocationMode === "percentage") {
+                          return `${value.toFixed(1)}%`;
+                        }
+                        return `${value}h`;
+                      }}
+                      style={{ fontSize: '12px', fill: '#374151' }}
+                    />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (

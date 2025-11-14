@@ -21,10 +21,23 @@ import ProjectDiary from "./pages/ProjectDiary";
 import ProjectDiaryView from "./pages/ProjectDiaryView";
 import NewDiaryEntry from "./pages/NewDiaryEntry";
 import EditDiaryEntry from "./pages/EditDiaryEntry";
+import NotificationPreferences from "./pages/NotificationPreferences";
 import { useAuth } from "./_core/hooks/useAuth";
 
 function Router() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <Switch>
@@ -49,6 +62,7 @@ function Router() {
             <Route path={"/diario-bordo/editar/:id"} component={EditDiaryEntry} />
             <Route path={"/diario-bordo/:projectId/nova"} component={NewDiaryEntry} />
             <Route path={"/diario-bordo/:id"} component={ProjectDiaryView} />
+            <Route path={"/configuracoes/notificacoes"} component={NotificationPreferences} />
           </DashboardLayout>
         </>
       ) : (

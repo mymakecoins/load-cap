@@ -13,7 +13,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
   - Suporte completo para edição de conteúdo rico com imagens
 
 #### Autenticação Local
-- **Migração de OAuth para Autenticação Local**: Sistema migrado de Manus OAuth para autenticação local
+- **Migração de OAuth para Autenticação Local**: Sistema migrado de OAuth externo para autenticação local
   - Login com email e senha
   - Gerenciamento de sessão via cookies seguros
   - Redirecionamento automático para dashboard após login
@@ -70,7 +70,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 ### 🗑️ Removido
 
 #### Autenticação
-- **Manus OAuth**: Removida integração com Manus OAuth
+- **OAuth externo**: Removida integração com OAuth externo
   - Removido `server/_core/oauth.ts`
   - Removido `server/_core/sdk.ts`
   - Removidas rotas OAuth (`/api/oauth/callback`)
@@ -94,7 +94,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 #### Frontend
 - **Roteamento**: Removida rota de registro
 - **Componentes**: Removido componente `Register.tsx`
-- **Hooks**: Removido código relacionado a localStorage do Manus OAuth
+- **Hooks**: Removido código relacionado a localStorage do OAuth externo
 
 #### Banco de Dados
 - **Schema**: Campo `content` da tabela `project_log_entries` alterado para `MEDIUMTEXT`
@@ -119,7 +119,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 ## [1.0.0] - Versão Anterior
 
 ### Funcionalidades Iniciais
-- Sistema de autenticação com OAuth Manus
+- Sistema de autenticação com OAuth externo
 - CRUD de clientes, colaboradores e projetos
 - Sistema de alocações com histórico
 - Dashboard com visões e relatórios

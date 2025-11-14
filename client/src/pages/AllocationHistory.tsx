@@ -26,6 +26,20 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from "recharts";
+import { RotateCcw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 function getMonthDates() {
   const today = new Date();
@@ -47,9 +61,13 @@ export default function AllocationHistory() {
   const [startDate, setStartDate] = useState(monthDates.start);
   const [endDate, setEndDate] = useState(monthDates.end);
   const [searchComment, setSearchComment] = useState("");
+  const [revertingId, setRevertingId] = useState<number | null>(null);
+  const [revertComment, setRevertComment] = useState("");
 
   const { data: employees } = trpc.employees.list.useQuery();
   const { data: projects } = trpc.projects.list.useQuery();
+  const { user } = useAuth();
+  const utils = trpc.useUtils();
   
   // Buscar histórico do colaborador selecionado (sem filtro de projeto) para obter lista de projetos disponíveis
   const { data: employeeHistory } = trpc.allocations.getHistory.useQuery(
@@ -58,11 +76,60 @@ export default function AllocationHistory() {
   );
   
   // Passar filtros para a query do histórico principal
-  const { data: history, isLoading } = trpc.allocations.getHistory.useQuery({
+  const { data: history, isLoading, refetch } = trpc.allocations.getHistory.useQuery({
     employeeId: filterEmployeeId || undefined,
     projectId: filterProjectId || undefined,
   });
   const { data: allocationMode } = trpc.settings.getAllocationMode.useQuery();
+  const revertMutation = trpc.allocations.revert.useMutation();
+
+  // Função para verificar se é coordenador
+  const isCoordinator = (role: string) => role === "coordinator" || role === "admin";
+
+  // Função para verificar se pode reverter
+  const canRevert = (record: any) => {
+    return !record.action.startsWith("reverted") && isCoordinator(user?.role || "");
+  };
+
+  // Função para reverter
+  const handleRevert = async () => {
+    if (!revertingId) return;
+    
+    try {
+      await revertMutation.mutateAsync({
+        historyId: revertingId,
+        comment: revertComment || undefined,
+      });
+      
+      toast.success("Mudança revertida com sucesso");
+      setRevertingId(null);
+      setRevertComment("");
+      // Recarregar histórico
+      await refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao reverter mudança");
+    }
+  };
+
+  // Função para obter label do tipo de ação
+  const getActionLabel = (action: string) => {
+    switch (action) {
+      case "created":
+        return "Alocação";
+      case "updated":
+        return "Atualização";
+      case "deleted":
+        return "Remoção";
+      case "reverted_creation":
+        return "Revertido: Criação";
+      case "reverted_update":
+        return "Revertido: Atualização";
+      case "reverted_deletion":
+        return "Revertido: Deleção";
+      default:
+        return action;
+    }
+  };
 
   // Limpar projeto quando colaborador mudar
   useEffect(() => {
@@ -140,9 +207,14 @@ export default function AllocationHistory() {
     });
   }
 
+  // Ordenar histórico por data de criação (mais antigo primeiro) antes de agrupar
+  const sortedHistory = [...filteredHistory].sort((a: any, b: any) => {
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  });
+
   // Agrupar por data para gráfico baseado no modo configurado
   const historyByDate: Record<string, number> = {};
-  filteredHistory.forEach((h: any) => {
+  sortedHistory.forEach((h: any) => {
     const date = new Date(h.createdAt).toLocaleDateString('pt-BR');
     const value = allocationMode === "percentage"
       ? (h.allocatedPercentage ? parseFloat(String(h.allocatedPercentage)) : 0)
@@ -150,10 +222,17 @@ export default function AllocationHistory() {
     historyByDate[date] = (historyByDate[date] || 0) + value;
   });
 
-  const chartData = Object.entries(historyByDate).map(([date, value]) => ({
-    date,
-    value,
-  }));
+  // Converter para array e ordenar por data (mais antigo primeiro)
+  // Converter data brasileira (DD/MM/YYYY) para timestamp para ordenação correta
+  const chartData = Object.entries(historyByDate)
+    .map(([date, value]) => {
+      // Converter data brasileira para timestamp
+      const [day, month, year] = date.split('/');
+      const timestamp = new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).getTime();
+      return { date, value, timestamp };
+    })
+    .sort((a, b) => a.timestamp - b.timestamp) // Ordenar do mais antigo para o mais recente
+    .map(({ timestamp, ...rest }) => rest); // Remover timestamp do objeto final
 
   return (
     <div className="space-y-6">
@@ -169,8 +248,8 @@ export default function AllocationHistory() {
           <CardDescription>Filtre o histórico por colaborador, projeto e período</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            <div className="sm:col-span-2 md:col-span-1 lg:col-span-1">
               <Label htmlFor="comment-search">Buscar por comentário</Label>
               <Input
                 id="comment-search"
@@ -182,14 +261,14 @@ export default function AllocationHistory() {
             <div>
               <Label htmlFor="user-filter">Modificado por</Label>
               <Select 
-                value={filterChangedBy?.toString() || ""} 
-                onValueChange={(value) => setFilterChangedBy(value ? parseInt(value) : null)}
+                value={filterChangedBy?.toString() || "all"} 
+                onValueChange={(value) => setFilterChangedBy(value === "all" ? null : parseInt(value))}
               >
                 <SelectTrigger id="user-filter">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   {changedByUsers.map((user) => (
                     <SelectItem key={user.id} value={user.id.toString()}>
                       {user.name}
@@ -233,6 +312,7 @@ export default function AllocationHistory() {
                       setFilterProjectId(null);
                     }}
                     title="Limpar colaborador"
+                    className="flex-shrink-0"
                   >
                     ×
                   </Button>
@@ -267,6 +347,7 @@ export default function AllocationHistory() {
                     onClick={() => setFilterProjectId(null)}
                     title="Limpar projeto"
                     disabled={!filterEmployeeId}
+                    className="flex-shrink-0"
                   >
                     ×
                   </Button>
@@ -322,7 +403,9 @@ export default function AllocationHistory() {
                   type="monotone" 
                   dataKey="value" 
                   stroke="#3b82f6" 
-                  name={allocationMode === "percentage" ? "Percentual Alterado" : "Horas Alteradas"} 
+                  name={allocationMode === "percentage" ? "Percentual Alterado" : "Horas Alteradas"}
+                  dot={{ fill: "#3b82f6", r: 4 }}
+                  activeDot={{ r: 6 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -359,6 +442,7 @@ export default function AllocationHistory() {
                     <TableHead>Modificado por</TableHead>
                     <TableHead>{allocationMode === "percentage" ? "Percentual" : "Horas Alteradas"}</TableHead>
                     <TableHead>Comentário</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -375,9 +459,7 @@ export default function AllocationHistory() {
                           {projects?.find(p => p.id === record.projectId)?.name || "-"}
                         </TableCell>
                         <TableCell>
-                          {record.action === "created" && "Criado"}
-                          {record.action === "updated" && "Atualizado"}
-                          {record.action === "deleted" && "Removido"}
+                          {getActionLabel(record.action)}
                         </TableCell>
                         <TableCell>
                           <Tooltip>
@@ -412,11 +494,23 @@ export default function AllocationHistory() {
                             <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
+                        <TableCell>
+                          {canRevert(record) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setRevertingId(record.id)}
+                              title="Reverter esta mudança"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                         Nenhum histórico encontrado
                       </TableCell>
                     </TableRow>
@@ -427,6 +521,43 @@ export default function AllocationHistory() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de confirmação de reversão */}
+      <AlertDialog open={revertingId !== null} onOpenChange={(open) => !open && setRevertingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reverter Mudança?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação desfará a mudança anterior. Uma nova entrada será criada no histórico.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-2">
+            <Label htmlFor="revert-comment">Comentário (opcional)</Label>
+            <Textarea
+              id="revert-comment"
+              placeholder="Por que está revertendo esta mudança?"
+              value={revertComment}
+              onChange={(e) => setRevertComment(e.target.value)}
+              maxLength={500}
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              {revertComment.length}/500 caracteres
+            </p>
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleRevert} 
+              disabled={revertMutation.isPending}
+            >
+              {revertMutation.isPending ? "Revertendo..." : "Reverter"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

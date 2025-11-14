@@ -3,7 +3,7 @@
 ## Requisitos Funcionais
 
 ### Autenticação e Autorização
-- [ ] Sistema de autenticação com OAuth Manus
+- [ ] Sistema de autenticação com OAuth externo
 - [ ] Papéis de usuário: Coordenador Operacional, Gerente de Projeto, Desenvolvedor
 - [ ] Controle de acesso baseado em papéis (RBAC)
 
